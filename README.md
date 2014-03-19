@@ -22,11 +22,11 @@ routing to handle mapping and by building a path routing layer on top of the Net
 Setting up an HTTP Service using the framework
 ----------------------------------------------
 Setting up an HTTP service is very simple using this framework:
-a) Write Handler methods for different HTTP requests
-b) Annotate the routes for each handler
-c) Use a builder to setup the HTTP service
+* Write Handler methods for different HTTP requests
+* Annotate the routes for each handler
+* Use a builder to setup the HTTP service
 
-Example: A simple HTTP service that responds to `/v1/ping` endpoint can be setup as:
+Example: A simple HTTP service that responds to the `/v1/ping` endpoint can be setup as:
 
 ```java
     // Set up Handlers for Ping
