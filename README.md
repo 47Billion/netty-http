@@ -46,6 +46,6 @@ Example: A simple HTTP service that responds to the `/v1/ping` endpoint can be s
 
 References
 ----------
-* Guava [https://code.google.com/p/guava-libraries/]
-* Jersey [https://jersey.java.net]
-* Netty [http://netty.io/]
+* [Guava](https://code.google.com/p/guava-libraries/)
+* [Jersey](https://jersey.java.net)
+* [Netty](http://netty.io/)
