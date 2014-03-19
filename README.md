@@ -1,6 +1,6 @@
 http
 ====
-A library to develop HTTP services with Netty. Supports capabilities to route end-points based JAX-RS style
+A library to develop HTTP services with Netty. Supports the capability to route end-points based on JAX-RS style
 annotations. Implements Guava's Service interface to manage the runtime-state of the HTTP service.
 
 Need for this framework
