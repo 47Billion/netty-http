@@ -1,6 +1,6 @@
 http
 ====
-Framework to build HTTP service on top of Netty. Supports capabilities to route end-points based on annotations.
+A library to develop HTTP services with Netty Supports capabilities to route end-points based JAX-RS style annotations.
 Implements Guava's Service interface to manage the runtime-state of the HTTP service.
 
 Need for this framework
@@ -9,7 +9,7 @@ Netty is a powerful framework to write asynchronous event-driven high-performanc
 relatively easy to write a RESTFUL HTTP service using netty, the mapping between HTTP routes to handlers is
 not a straight-forward task.
 
-Mapping the routes to method handlers requires writing custom `ChannelHandler`s and a lot of boilerplate code
+Mapping the routes to method handlers requires writing custom channel handlers and a lot of boilerplate code
 as well as knowledge of Netty's internals in order to correctly chain different handlers.The mapping could be
 error prone and tedious when a service handles a lot of end-points.
 
