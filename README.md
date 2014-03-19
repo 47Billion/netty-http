@@ -29,7 +29,8 @@ b) Annotate the routes that each handler using annotations
 c) Use a builder to setup the HTTP service
 
 
-Example to set up a simple Ping service
+Example: A simple HTTP service that responds to /v1/ping endpoint can be setup as follows:
+
 
 ```java
     // Set up Handlers for Ping
