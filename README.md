@@ -1,9 +1,8 @@
 http
 ====
 
-Framework to build HTTP service built on top of Netty. Supports capabilities to route end-points using annotations.
-Implements Guava's Service interface to manage the states of the HTTP service.
-
+Framework to build HTTP service on top of Netty. Supports capabilities to route end-points based on annotations.
+Implements Guava's Service interface to manage the runtime-state of the HTTP service.
 
 Need for this framework
 =======================
@@ -18,7 +17,6 @@ end-point and to have a framework that can handle this path routing based on ann
 
 This framework aims to solve the problem by using JAX-RS annotations from jersey-library for HTTP route
 to handler mapping and building a path routing layer on-top of Netty HTTP.
-
 
 Setting up a HTTP Service using the framework
 ==============================================
