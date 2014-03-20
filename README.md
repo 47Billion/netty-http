@@ -1,19 +1,25 @@
-http
-====
-A library to develop HTTP services with Netty. Supports the capability to route end-points based on JAX-RS style
-annotations. Implements Guava's Service interface to manage the runtime-state of the HTTP service.
+Netty Http
+-------
+A library to develop HTTP services with [Netty](http://netty.io/). Supports the capability to route end-points based on [JAX-RS](https://jax-rs-spec.java.net/) style annotations. Implements Guava's Service interface to manage the runtime-state of the HTTP service.
 
 Need for this library 
 ---------------------
-Netty is a powerful framework to write asynchronous event-driven high-performance applications. While it is
-relatively easy to write a RESTFUL HTTP service using netty, the mapping between HTTP routes to handlers is
+[Netty](http://netty.io/) is a powerful framework to write asynchronous event-driven high-performance applications. While it is relatively easy to write a RESTFUL HTTP service using netty, the mapping between HTTP routes to handlers is
 not a straight-forward task.
 
 Mapping the routes to method handlers requires writing custom channel handlers and a lot of boilerplate code
 as well as knowledge of Netty's internals in order to correctly chain different handlers. The mapping could be
 error prone and tedious when a service handles a lot of end-points.
 
-This library solves these problems using JAX-RS annotations to build a path routing layer on top of Netty.
+This library solves these problems using [JAX-RS](https://jax-rs-spec.java.net/) annotations to build a path routing layer on top of Netty.
+
+Build the HTTP Library
+----------------------
+```
+  $ git clone http://github.com/continuuity/http
+  $ cd http
+  $ mvn clean package
+```
 
 Setting up an HTTP Service using the library
 --------------------------------------------
