@@ -58,9 +58,9 @@ References
 
 ## Contributing to netty-http
 
-Are you interested in making Loom better? Our development model is a simple pull-based model with a consensus building phase, similar to the Apache's voting process. If you want to help make Loom better, by adding new features, fixing bugs, or even suggesting improvements to something that's already there, here's how you can contribute:
+Are you interested in making netty-http better? Our development model is a simple pull-based model with a consensus building phase, similar to the Apache's voting process. If you want to help make netty-http better, by adding new features, fixing bugs, or even suggesting improvements to something that's already there, here's how you can contribute:
 
- * Fork loom into your own GitHub repository
+ * Fork netty-http into your own GitHub repository
  * Create a topic branch with an appropriate name
  * Work on your favorite feature to your content
  * Once you are satisifed, create a pull request by going to the continuuity/netty-http project.
