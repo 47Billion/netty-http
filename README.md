@@ -56,16 +56,16 @@ References
 * [Jersey](https://jersey.java.net)
 * [Netty](http://netty.io/)
 
-## Contributing to Loom
+## Contributing to netty-http
 
 Are you interested in making Loom better? Our development model is a simple pull-based model with a consensus building phase, similar to the Apache's voting process. If you want to help make Loom better, by adding new features, fixing bugs, or even suggesting improvements to something that's already there, here's how you can contribute:
 
  * Fork loom into your own GitHub repository
  * Create a topic branch with an appropriate name
  * Work on your favorite feature to your content
- * Once you are satisifed, create a pull request by going to the continuuity/loom project.
+ * Once you are satisifed, create a pull request by going to the continuuity/netty-http project.
  * Address all the review comments
- * Once addressed, the changes will be committed to the continuuity/loom repo.
+ * Once addressed, the changes will be committed to the continuuity/netty-http repo.
 
 ## Contributor License Agreement ("CLA")
 In order to accept your pull request, we need you to submit a CLA. You only need to do this once, so if you've done this for another Continuuity open source project, you're good to go. If you are submitting a pull request for the first time, just let us know that you have completed the CLA and we can cross-check with your GitHub username. 
