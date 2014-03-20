@@ -3,8 +3,8 @@ http
 A library to develop HTTP services with Netty. Supports the capability to route end-points based on JAX-RS style
 annotations. Implements Guava's Service interface to manage the runtime-state of the HTTP service.
 
-Need for this framework
------------------------
+Need for this library 
+---------------------
 Netty is a powerful framework to write asynchronous event-driven high-performance applications. While it is
 relatively easy to write a RESTFUL HTTP service using netty, the mapping between HTTP routes to handlers is
 not a straight-forward task.
