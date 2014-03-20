@@ -28,17 +28,17 @@ package com.continuuity.http;
  *
  *  Example:
  *  public class ApiHandler implements HttpHandler{
- *    @Override
+ *    {@literal @}Override
  *    public void init(HandlerContext context){
  *      //Perform bootstrap operations before any of the handlers in this class gets called.
  *    }
- *    @Override
+ *    {@literal @}Override
  *    public void destroy(HandlerContext context){
  *      //Perform teardown operations before the server shuts down.
  *    }
  *
- *    @Path("/common/v1/widgets")
- *    @GET
+ *    {@literal @}Path("/common/v1/widgets")
+ *    {@literal @}GET
  *    public void handleGet(HttpRequest request, HttpResponder responder){
  *      //Handle Http request
  *    }

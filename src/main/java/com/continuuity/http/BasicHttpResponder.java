@@ -187,8 +187,8 @@ public class BasicHttpResponder implements HttpResponder {
   }
 
   /**
-   * Respond to the client saying the response will be in chunks. Add chunks to response using @{link sendChunk}
-   * and @{link sendChunkEnd}.
+   * Respond to the client saying the response will be in chunks. Add chunks to response using
+ *  {@link #sendChunk(ChannelBuffer)} and {@link #sendChunkEnd}.
    * @param status  the status code to respond with. Defaults to 200-OK if null.
    * @param headers additional headers to send with the response. May be null.
    */
@@ -209,8 +209,8 @@ public class BasicHttpResponder implements HttpResponder {
   }
 
   /**
-   * Add a chunk of data to the response. @{link sendChunkStart} should be called before calling this method.
-   * @{link sendChunkEnd} should be called after all chunks are done.
+   * Add a chunk of data to the response. {@link #sendChunkStart(HttpResponseStatus, Multimap)} should be called before calling
+   * this method. {@link #sendChunkEnd} should be called after all chunks are done.
    * @param content the chunk of content to send
    */
   @Override

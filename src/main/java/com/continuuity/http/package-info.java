@@ -30,20 +30,20 @@
  *
  * //Setup Handlers
  *
- * @Path("/common/v1/")
+ * {@literal @}Path("/common/v1/")
  * public class ApiHandler implements HttpHandler{
- *   @Path("widgets")
- *   @GET
+ *   {@literal @}Path("widgets")
+ *   {@literal @}GET
  *   public void widgetHandler(HttpRequest request, HttpResponder responder){
  *      responder.sendJson(HttpResponseStatus.OK, "{\"key\": \"value\"}");
  *   }
  *
- *   @Override
+ *   {@literal @}Override
  *   public void init(HandlerContext context){
  *    //Perform bootstrap operations before any of the handlers in this class gets called.
  *   }
  *
- *   @Override
+ *   {@literal @}Override
  *   public void destroy(HandlerContext context){
  *    //Perform teardown operations the server shuts down.
  *  }
