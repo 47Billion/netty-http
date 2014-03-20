@@ -15,9 +15,9 @@ error prone and tedious when a service handles a lot of end-points.
 
 This library solves these problems using JAX-RS annotations to build a path routing layer on top of Netty.
 
-Setting up an HTTP Service using the framework
-----------------------------------------------
-Setting up an HTTP service is very simple using this framework:
+Setting up an HTTP Service using the library
+--------------------------------------------
+Setting up an HTTP service is very simple using this library:
 * Implement handler methods for different HTTP requests
 * Annotate the routes for each handler
 * Use a builder to setup the HTTP service
