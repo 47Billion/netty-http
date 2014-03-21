@@ -50,6 +50,70 @@ Example: A simple HTTP service that responds to the `/v1/ping` endpoint can be s
     server.startAndWait();
 ```
 
+Example: Sample HTTP service that manages an application lifecycle.
+
+```java
+   // Set up handlers
+   // Setting up Path annotation on a class level will be pre-pended with
+   @Path("/v1/apps")
+   public class ApplicationHandler extends AbstractHandler {
+
+      // The HTTP endpoint v1/apps/deploy will be handled by the deploy method given below
+      @Path("deploy")
+      @POST
+      public void deploy(HttpRequest request, HttpResponder responder) {
+        // ..
+        // Deploy application and send status
+        // ..
+        responder.sendStatus(HttpResponseStatus.OK);
+      }
+
+      // The HTTP endpoint v1/apps/{id}/start will be handled by the start method given below
+      @Path("{id}/start")
+      @POST
+      public void start(HttpRequest request, HttpResponder responder, @PathParam("id") String id) {
+      // The id that is passed in HTTP request will be mapped to a String via the PathParam annotation
+        // ..
+        // Start the application
+        // ..
+        responder.sendStatus(HttpResponseStatus.OK);
+      }
+
+      // The HTTP endpoint v1/apps/{id}/stop will be handled by the stop method given below
+      @Path("{id}/stop")
+      @POST
+      public void stop(HttpRequest request, HttpResponder responder, @PathParam("id") String id) {
+      // The id that is passed in HTTP request will be mapped to a String via the PathParam annotation
+        // ..
+        // Stop the application
+        // ..
+        responder.sendStatus(HttpResponseStatus.OK);
+      }
+
+      // The HTTP endpoint v1/apps/{id}/status will be handled by the status method given below
+      @Path("{id}/status")
+      @GET
+      public void status(HttpRequest request, HttpResponder responder, @PathParam("id") String id) {
+      // The id that is passed in HTTP request will be mapped to a String via the PathParam annotation
+        // ..
+        // Retrieve status the application
+        // ..
+        JsonObject status = new JsonObject();
+        status.addProperty("status", "RUNNING");
+        responder.sendJson(HttpResponseStatus.OK, status);
+      }
+   }
+
+    // Setup HTTP service and add Handlers
+    NettyHttpService service = NettyHttpService.builder()
+                               .setPort(7777)
+                               .addHttpHandlers(ImmutableList.of(new ApplicationHandler()))
+                               .build();
+
+    // Start the HTTP service
+    server.startAndWait();
+```
+
 References
 ----------
 * [Guava](https://code.google.com/p/guava-libraries/)
