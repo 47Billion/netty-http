@@ -47,7 +47,7 @@ Example: A simple HTTP service that responds to the `/v1/ping` endpoint can be s
                                .build();
 
     // Start the HTTP service
-    server.startAndWait();
+    service.startAndWait();
 ```
 
 Example: Sample HTTP service that manages an application lifecycle.
@@ -111,7 +111,7 @@ Example: Sample HTTP service that manages an application lifecycle.
                                .build();
 
     // Start the HTTP service
-    server.startAndWait();
+    service.startAndWait();
 ```
 
 References
