@@ -18,6 +18,7 @@ package com.continuuity.http;
 
 import com.google.common.collect.Lists;
 import com.google.common.io.ByteStreams;
+import com.google.common.reflect.TypeToken;
 import com.google.common.util.concurrent.Service;
 import com.google.gson.Gson;
 import org.apache.http.HttpResponse;
@@ -34,6 +35,7 @@ import org.junit.Test;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.lang.reflect.Type;
 import java.util.List;
 import java.util.Map;
 
@@ -44,6 +46,7 @@ import static org.junit.Assert.assertEquals;
  */
 public class HttpServerTest {
 
+  private static final Type STRING_MAP_TYPE = new TypeToken<Map<String, String>>() {}.getType();
   static int port;
   static NettyHttpService service;
 
@@ -77,7 +80,7 @@ public class HttpServerTest {
 
     String content = getResponseContent(response);
     Gson gson = new Gson();
-    Map<String, String> map = gson.fromJson(content, Map.class);
+    Map<String, String> map = gson.fromJson(content, STRING_MAP_TYPE);
     assertEquals(1, map.size());
     assertEquals("Handled get in resource end-point", map.get("status"));
 
@@ -87,7 +90,7 @@ public class HttpServerTest {
 
     assertEquals(200, response.getStatusLine().getStatusCode());
     content = getResponseContent(response);
-    map = gson.fromJson(content, Map.class);
+    map = gson.fromJson(content, STRING_MAP_TYPE);
     assertEquals(1, map.size());
     assertEquals("Handled get in tweets end-point, id: 1", map.get("status"));
   }
@@ -128,7 +131,7 @@ public class HttpServerTest {
     assertEquals(200, response.getStatusLine().getStatusCode());
     String content = getResponseContent(response);
     Gson gson = new Gson();
-    Map<String, String> map = gson.fromJson(content, Map.class);
+    Map<String, String> map = gson.fromJson(content, STRING_MAP_TYPE);
     assertEquals(1, map.size());
     assertEquals("Handled put in tweets end-point, id: 1. Content: Hello, World", map.get("result"));
   }
@@ -142,7 +145,7 @@ public class HttpServerTest {
     assertEquals(200, response.getStatusLine().getStatusCode());
     String content = getResponseContent(response);
     Gson gson = new Gson();
-    Map<String, String> map = gson.fromJson(content, Map.class);
+    Map<String, String> map = gson.fromJson(content, STRING_MAP_TYPE);
     assertEquals(1, map.size());
     assertEquals("Handled post in tweets end-point, id: 1. Content: Hello, World", map.get("result"));
   }
@@ -173,7 +176,7 @@ public class HttpServerTest {
     assertEquals(200, response.getStatusLine().getStatusCode());
     String content = getResponseContent(response);
     Gson gson = new Gson();
-    Map<String, String> map = gson.fromJson(content, Map.class);
+    Map<String, String> map = gson.fromJson(content, STRING_MAP_TYPE);
     assertEquals(1, map.size());
     assertEquals("Handled multiple path parameters sree 12", map.get("result"));
   }
@@ -188,7 +191,7 @@ public class HttpServerTest {
     assertEquals(200, response.getStatusLine().getStatusCode());
     String content = getResponseContent(response);
     Gson gson = new Gson();
-    Map<String, String> map = gson.fromJson(content, Map.class);
+    Map<String, String> map = gson.fromJson(content, STRING_MAP_TYPE);
     assertEquals(1, map.size());
     assertEquals("Handled multiple path parameters sree 21", map.get("result"));
   }
