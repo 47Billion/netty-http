@@ -209,8 +209,8 @@ public class BasicHttpResponder implements HttpResponder {
   }
 
   /**
-   * Add a chunk of data to the response. {@link #sendChunkStart(HttpResponseStatus, Multimap)} should be called before calling
-   * this method. {@link #sendChunkEnd} should be called after all chunks are done.
+   * Add a chunk of data to the response. {@link #sendChunkStart(HttpResponseStatus, Multimap)}
+   * should be called before calling this method. {@link #sendChunkEnd} should be called after all chunks are done.
    * @param content the chunk of content to send
    */
   @Override

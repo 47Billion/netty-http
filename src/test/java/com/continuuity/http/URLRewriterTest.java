@@ -77,7 +77,7 @@ public class URLRewriterTest {
     response = doPut("/rewrite/test/v1/tweets/7648");
     Assert.assertEquals(HttpResponseStatus.OK.getCode(), response.getStatusLine().getStatusCode());
     Map<String, String> stringMap = GSON.fromJson(EntityUtils.toString(response.getEntity()),
-                                                  new TypeToken<Map<String, String>>() {}.getType());
+                                                  new TypeToken<Map<String, String>>() { }.getType());
     Assert.assertEquals(ImmutableMap.of("status", "Handled put in tweets end-point, id: 7648"),
                         stringMap);
   }

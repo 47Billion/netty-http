@@ -42,11 +42,11 @@ import java.util.Map;
 import static org.junit.Assert.assertEquals;
 
 /**
- * Test the HttpServer
+ * Test the HttpServer.
  */
 public class HttpServerTest {
 
-  private static final Type STRING_MAP_TYPE = new TypeToken<Map<String, String>>() {}.getType();
+  private static final Type STRING_MAP_TYPE = new TypeToken<Map<String, String>>() { }.getType();
   static int port;
   static NettyHttpService service;
 

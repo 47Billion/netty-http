@@ -16,7 +16,6 @@
 
 package com.continuuity.http;
 
-import com.continuuity.utils.ImmutablePair;
 import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -43,6 +42,10 @@ public final class PatternPathRouterWithGroups<T> {
 
   private final List<ImmutablePair<Pattern, RouteDestinationWithGroups<T>>> patternRouteList;
 
+  public static <T> PatternPathRouterWithGroups<T> create() {
+    return new PatternPathRouterWithGroups<T>();
+  }
+
   /**
    * Initialize PatternPathRouterWithGroups.
    */
@@ -56,7 +59,7 @@ public final class PatternPathRouterWithGroups<T> {
    * @param source  Source path to be routed. Routed path can have named wild-card pattern with braces "{}".
    * @param destination Destination of the path.
    */
-  public void add(final String source, final T destination){
+  public void add(final String source, final T destination) {
 
     // replace multiple slashes with a single slash.
     String path = source.replaceAll("/+", "/");
@@ -86,8 +89,7 @@ public final class PatternPathRouterWithGroups<T> {
     sb.setLength(sb.length() - 1);
 
     Pattern pattern = Pattern.compile(sb.toString());
-    patternRouteList.add(new ImmutablePair<Pattern,
-      RouteDestinationWithGroups<T>>(pattern, new RouteDestinationWithGroups<T>(destination, groupNames)));
+    patternRouteList.add(ImmutablePair.of(pattern, new RouteDestinationWithGroups<T>(destination, groupNames)));
   }
 
   /**
@@ -97,7 +99,7 @@ public final class PatternPathRouterWithGroups<T> {
    * @param path path to be routed.
    * @return List of Destinations matching the given route.
    */
-  public List<RoutableDestination<T>> getDestinations(String path){
+  public List<RoutableDestination<T>> getDestinations(String path) {
 
     String cleanPath = (path.endsWith("/") && path.length() > 1)
       ? path.substring(0, path.length() - 1) : path;
