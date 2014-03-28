@@ -49,8 +49,8 @@ import static com.continuuity.http.PatternPathRouterWithGroups.RoutableDestinati
 public final class HttpResourceHandler implements HttpHandler {
 
   private static final Logger LOG = LoggerFactory.getLogger(HttpResourceHandler.class);
-  private final PatternPathRouterWithGroups<HttpResourceModel> patternRouter =
-    new PatternPathRouterWithGroups<HttpResourceModel>();
+
+  private final PatternPathRouterWithGroups<HttpResourceModel> patternRouter = PatternPathRouterWithGroups.create();
   private final Iterable<HttpHandler> handlers;
   private final Iterable<HandlerHook> handlerHooks;
   private final URLRewriter urlRewriter;
@@ -63,7 +63,7 @@ public final class HttpResourceHandler implements HttpHandler {
    * @param handlerHooks Iterable of HandlerHook.
    * @param urlRewriter URL re-writer.
    */
-  public HttpResourceHandler(Iterable<HttpHandler> handlers, Iterable<HandlerHook> handlerHooks,
+  public HttpResourceHandler(Iterable<? extends HttpHandler> handlers, Iterable<? extends HandlerHook> handlerHooks,
                              URLRewriter urlRewriter) {
     //Store the handlers to call init and destroy on all handlers.
     this.handlers = ImmutableList.copyOf(handlers);

@@ -34,7 +34,7 @@ public class PathRouterTest {
   @Test
   public void testPathRoutings(){
 
-    PatternPathRouterWithGroups<String> pathRouter = new PatternPathRouterWithGroups<String>();
+    PatternPathRouterWithGroups<String> pathRouter = PatternPathRouterWithGroups.create();
     pathRouter.add("/foo/{baz}/b", "foobarb");
     pathRouter.add("/foo/bar/baz", "foobarbaz");
     pathRouter.add("/baz/bar", "bazbar");
@@ -127,7 +127,7 @@ public class PathRouterTest {
     );
 
     routes = pathRouter.getDestinations("/foo/bar/wildcard/id1");
-    assertEquals(2,routes.size());
+    assertEquals(2, routes.size());
     assertEquals(ImmutableSet.of("wildcard-id", "slash-wildcard-id"),
                  ImmutableSet.of(routes.get(0).getDestination(), routes.get(1).getDestination()));
     //noinspection AssertEqualsBetweenInconvertibleTypes
@@ -136,12 +136,12 @@ public class PathRouterTest {
     );
 
     routes = pathRouter.getDestinations("/wildcard/id1");
-    assertEquals(1,routes.size());
+    assertEquals(1, routes.size());
     assertEquals("wildcard-id", routes.get(0).getDestination());
     assertEquals(ImmutableMap.of("id", "id1"), routes.get(0).getGroupNameValues());
 
     routes = pathRouter.getDestinations("/foo/bar/wildcard/bar/foo/id1");
-    assertEquals(2,routes.size());
+    assertEquals(2, routes.size());
     assertEquals(ImmutableSet.of("wildcard-foo-id", "slash-wildcard-foo-id"),
                  ImmutableSet.of(routes.get(0).getDestination(), routes.get(1).getDestination()));
     //noinspection AssertEqualsBetweenInconvertibleTypes
@@ -150,7 +150,7 @@ public class PathRouterTest {
     );
 
     routes = pathRouter.getDestinations("/foo/bar/wildcard/bar/foo/id1/baz/bar");
-    assertEquals(2,routes.size());
+    assertEquals(2, routes.size());
     assertEquals(ImmutableSet.of("wildcard-foo-id-2", "slash-wildcard-foo-id-2"),
                  ImmutableSet.of(routes.get(0).getDestination(), routes.get(1).getDestination()));
     //noinspection AssertEqualsBetweenInconvertibleTypes
@@ -159,7 +159,7 @@ public class PathRouterTest {
     );
 
     routes = pathRouter.getDestinations("/wildcard/bar/foo/id1/baz/bar");
-    assertEquals(1,routes.size());
+    assertEquals(1, routes.size());
     assertEquals("wildcard-foo-id-2", routes.get(0).getDestination());
     assertEquals(ImmutableMap.of("id", "id1"), routes.get(0).getGroupNameValues());
   }

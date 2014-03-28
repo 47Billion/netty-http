@@ -14,7 +14,7 @@
  * the License.
  */
 
-package com.continuuity.utils;
+package com.continuuity.http;
 
 import com.google.common.base.Objects;
 
@@ -39,7 +39,7 @@ import com.google.common.base.Objects;
  * @param <A> type A
  * @param <B> type B
  */
-public final class ImmutablePair<A, B> {
+final class ImmutablePair<A, B> {
   private final A first;
   private final B second;
 
@@ -52,7 +52,7 @@ public final class ImmutablePair<A, B> {
    * @param first object in pair
    * @param second object in pair
    */
-  public ImmutablePair(A first, B second) {
+  private ImmutablePair(A first, B second) {
     this.first = first;
     this.second = second;
   }
