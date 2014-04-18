@@ -19,17 +19,11 @@ package com.continuuity.http;
 import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 import org.apache.commons.beanutils.ConvertUtils;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.handler.codec.http.HttpChunk;
-import org.jboss.netty.handler.codec.http.HttpMessage;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import sun.net.httpserver.DefaultHttpServerProvider;
-import org.jboss.netty.channel.Channel;
-
 
 import javax.ws.rs.PathParam;
 import java.lang.annotation.Annotation;
@@ -140,37 +134,6 @@ public final class HttpResourceModel {
     }
     return null;
   }
-
-  /*public boolean getMethod(HttpRequest request, HttpResponder responder, Map<String, String> groupValues){
-    //TODO: Refactor group values.
-    try {
-      if (httpMethods.contains(request.getMethod())){
-        //Setup args for reflection call
-        Object [] args = new Object[method.getParameterTypes().length];
-        int parameterIndex = 0;
-        args[parameterIndex] = request;
-        parameterIndex++;
-        args[parameterIndex] = responder;
-
-        if (method.getReturnType().equals(BodyConsumer.class)){
-          return true;
-        }
-        else{
-          return false;
-        }
-
-      } else {
-        //Found a matching resource but could not find the right HttpMethod so return 405
-        responder.sendError(HttpResponseStatus.METHOD_NOT_ALLOWED,
-                            String.format("Problem accessing: %s. Reason: Method Not Allowed", request.getUri()));
-      }
-    } catch (Throwable e) {
-      LOG.error("Error processing path {} {}", request.getUri(), e, e);
-      responder.sendError(HttpResponseStatus.INTERNAL_SERVER_ERROR,
-                          String.format("Error in executing path: %s", request.getUri()));
-    }
-    return false;
-  }*/
 
   @Override
   public String toString() {

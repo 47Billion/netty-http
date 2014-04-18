@@ -16,7 +16,6 @@
 
 package com.continuuity.http;
 
-import com.google.common.base.Preconditions;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.Channels;
@@ -28,18 +27,16 @@ import org.jboss.netty.handler.codec.http.HttpChunkAggregator;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseEncoder;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.lang.reflect.Method;
-
 /**
- * HttpDispatcher that routes HTTP requests to appropriate http handler methods. The mapping between uri paths to
- * methods that handle particular path is managed using jax-rs annotations. {@code HttpMethodHandler} routes to method
- * whose @Path annotation matches the http request uri.
+ * RequestRouter that uses {@code HttpMethodHandler} to determine the http-handler method Signature of http request. It
+ * uses this signature to dynamically configure the Netty Pipeline. Http Handler methods with return-type BodyConsumer
+ * will be streamed , while other methods use HttpChunkAggregator
  */
+
 public class RequestRouter extends SimpleChannelUpstreamHandler {
 
   private static final Logger LOG = LoggerFactory.getLogger(HttpDispatcher.class);
@@ -70,7 +67,9 @@ public class RequestRouter extends SimpleChannelUpstreamHandler {
 
   private boolean handleRequest(HttpRequest httpRequest, Channel channel, ChannelHandlerContext ctx) {
 
-    HttpMethodInfo methodInfo= httpMethodHandler.getDestinationMethod(httpRequest, new BasicHttpResponder(channel, HttpHeaders.isKeepAlive(httpRequest)));
+    HttpMethodInfo methodInfo = httpMethodHandler.getDestinationMethod(
+      httpRequest, new BasicHttpResponder(channel, HttpHeaders.isKeepAlive(httpRequest)));
+
     if (methodInfo == null) {
       return false;
     }

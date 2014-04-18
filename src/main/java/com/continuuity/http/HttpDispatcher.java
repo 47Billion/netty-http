@@ -16,19 +16,15 @@
 
 package com.continuuity.http;
 
-import com.google.common.base.Preconditions;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMessage;
 import org.jboss.netty.handler.codec.http.HttpRequest;
-import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,10 +32,10 @@ import org.slf4j.LoggerFactory;
 import java.lang.reflect.Method;
 
 /**
- * HttpDispatcher that routes HTTP requests to appropriate http handler methods. The mapping between uri paths to
- * methods that handle particular path is managed using jax-rs annotations. {@code HttpMethodHandler} routes to method
- * whose @Path annotation matches the http request uri.
+ * HttpDispatcher that invokes the appropriate http-handler method. The handler and the arguments are passed
+ * from the {@code RequestRouter} context.
  */
+
 public class HttpDispatcher extends SimpleChannelUpstreamHandler {
 
   private static final Logger LOG = LoggerFactory.getLogger(HttpDispatcher.class);
@@ -94,21 +90,9 @@ public class HttpDispatcher extends SimpleChannelUpstreamHandler {
        methodInfo = (HttpMethodInfo) ctx.getPipeline().getContext("router").getAttachment();
        methodInfo.getResponder().sendError(HttpResponseStatus.INTERNAL_SERVER_ERROR,
                                            String.format("Error in executing path:"));
-      /*Object msg = e.getMessage();
-      HttpRequest request = (HttpRequest) msg;
-      HttpResponse response = new DefaultHttpResponse(request.getProtocolVersion(), HttpResponseStatus.INTERNAL_SERVER_ERROR);
-      Channels.write(ctx.getChannel(), response);*/
     }
   }
 
-  /*private void handleRequest(HttpRequest httpRequest, Channel channel) {
-    //Preconditions.checkNotNull(httpMethodHandler, "Http Handler factory cannot be null");
-    //httpMethodHandler.handle(httpRequest, new BasicHttpResponder(channel, HttpHeaders.isKeepAlive(httpRequest)),channel);
-    //channel.getPipeline().getContext("")
-=======
->>>>>>> Stashed changes
-  }
-   */
   @Override
   public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
     LOG.error("Exception caught in channel processing.", e.getCause());

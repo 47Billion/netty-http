@@ -22,11 +22,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import org.jboss.netty.channel.Channel;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.channel.Channel;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,7 +37,6 @@ import javax.ws.rs.Path;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.net.URI;
-
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -230,7 +228,6 @@ public final class HttpResourceHandler implements HttpHandler {
         getMatchedDestination(routableDestinations, request.getMethod(), path);
 
       if (matchedDestination != null) {
-        //Found a httpresource route to it.
         HttpResourceModel httpResourceModel = matchedDestination.getDestination();
 
         // Call preCall method of handler hooks.
@@ -245,7 +242,7 @@ public final class HttpResourceHandler implements HttpHandler {
           }
         }
 
-        // Call httpresource method
+        // Call httpresource handle method, return the HttpMethodInfo Object.
         if (!terminated) {
           // Wrap responder to make post hook calls.
           responder = new WrappedHttpResponder(responder, handlerHooks, request, info);

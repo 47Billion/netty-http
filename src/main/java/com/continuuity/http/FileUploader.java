@@ -2,41 +2,23 @@ package com.continuuity.http;
 
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferInputStream;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.handler.codec.frame.TooLongFrameException;
-import org.jboss.netty.handler.codec.http.HttpChunk;
-import org.jboss.netty.handler.codec.http.HttpChunkAggregator;
-import org.jboss.netty.handler.codec.http.HttpChunkTrailer;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
-import org.jboss.netty.handler.codec.http.HttpMessage;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import sun.tools.asm.CatchData;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
-import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
-import java.util.List;
 import java.util.Map;
-
-import static org.jboss.netty.channel.Channels.succeededFuture;
-import static org.jboss.netty.channel.Channels.write;
-import static org.jboss.netty.handler.codec.http.HttpHeaders.is100ContinueExpected;
 
 /**
  *
@@ -81,11 +63,10 @@ public class FileUploader extends Thread {
     FileUploader upper;
     upper = new FileUploader();
     upper.run();
-    while(true){
+    while (true){
       try {
         Thread.sleep(100);
-      }
-      catch (Exception ex){
+      } catch (Exception ex){
         ex.printStackTrace();
       }
 
@@ -121,10 +102,8 @@ public class FileUploader extends Thread {
     @Path("/upload2")
     @PUT
     public void upload2(HttpRequest request, HttpResponder response){
-      //String path = getPath(request);
       int size = request.getContent().readableBytes();
       response.sendString(HttpResponseStatus.OK, "Upload complete.. chunked size :" + size + "bytes");
-      //Channel =
     }
 
     @Path("/ping")
