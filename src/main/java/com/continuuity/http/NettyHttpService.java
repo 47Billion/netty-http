@@ -25,6 +25,7 @@ import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelLocal;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
@@ -39,11 +40,14 @@ import org.jboss.netty.handler.codec.http.HttpRequestDecoder;
 import org.jboss.netty.handler.codec.http.HttpResponseEncoder;
 import org.jboss.netty.handler.execution.ExecutionHandler;
 import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
+import org.jboss.netty.handler.stream.ChunkedWriteHandler;
+import java.lang.reflect.Method;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionHandler;
@@ -60,7 +64,14 @@ public final class NettyHttpService extends AbstractIdleService {
 
   private static final Logger LOG  = LoggerFactory.getLogger(NettyHttpService.class);
   private static final int MAX_INPUT_SIZE = 1024 * 1024 * 1024;
+
   private static final int CLOSE_CHANNEL_TIMEOUT = 5;
+
+  public static final ChannelLocal<Method> invokeMethod = new ChannelLocal();
+  public static final ChannelLocal<Object[]> invokeArgs = new ChannelLocal();
+  public static final ChannelLocal<HttpHandler  > invokeHandler = new ChannelLocal();
+
+
 
   private final int bossThreadPoolSize;
   private final int workerThreadPoolSize;
@@ -68,6 +79,8 @@ public final class NettyHttpService extends AbstractIdleService {
   private final long execThreadKeepAliveSecs;
   private final Map<String, Object> channelConfigs;
   private final RejectedExecutionHandler rejectedExecutionHandler;
+
+  private ChannelPipeline pipeline;
   private final HandlerContext handlerContext;
   private final ChannelGroup channelGroup;
   private final HttpResourceHandler resourceHandler;
@@ -150,8 +163,10 @@ public final class NettyHttpService extends AbstractIdleService {
    */
   private void bootStrap(int threadPoolSize, long threadKeepAliveSecs) {
 
+
     final ExecutionHandler executionHandler = (threadPoolSize) > 0 ?
       createExecutionHandler(threadPoolSize, threadKeepAliveSecs) : null;
+
 
     Executor bossExecutor = Executors.newFixedThreadPool(bossThreadPoolSize,
                                                          new ThreadFactoryBuilder()
@@ -187,7 +202,7 @@ public final class NettyHttpService extends AbstractIdleService {
 
         pipeline.addLast("tracker", connectionTracker);
         pipeline.addLast("decoder", new HttpRequestDecoder());
-        pipeline.addLast("aggregator", new HttpChunkAggregator(MAX_INPUT_SIZE));
+        pipeline.addLast("router", new RequestRouter(resourceHandler));
         pipeline.addLast("encoder", new HttpResponseEncoder());
         pipeline.addLast("compressor", new HttpContentCompressor());
         if (executionHandler != null) {
@@ -198,6 +213,8 @@ public final class NettyHttpService extends AbstractIdleService {
         return pipeline;
       }
     });
+
+
   }
 
   public static Builder builder() {
@@ -211,7 +228,13 @@ public final class NettyHttpService extends AbstractIdleService {
     Channel channel = bootstrap.bind(bindAddress);
     channelGroup.add(channel);
     bindAddress = ((InetSocketAddress) channel.getLocalAddress());
+    pipeline = bootstrap.getPipelineFactory().getPipeline();
+
     LOG.info("Started service on address {}", bindAddress);
+  }
+
+  public ChannelPipeline getPipeline(){
+    return pipeline;
   }
 
   /**

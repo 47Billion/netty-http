@@ -22,9 +22,8 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
-import org.jboss.netty.handler.codec.http.HttpChunk;
+import org.jboss.netty.handler.codec.http.HttpChunkAggregator;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
-import org.jboss.netty.handler.codec.http.HttpMessage;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,62 +35,46 @@ import java.lang.reflect.Method;
  * methods that handle particular path is managed using jax-rs annotations. {@code HttpMethodHandler} routes to method
  * whose @Path annotation matches the http request uri.
  */
-public class HttpDispatcher extends SimpleChannelUpstreamHandler {
+public class RequestRouter extends SimpleChannelUpstreamHandler {
 
   private static final Logger LOG = LoggerFactory.getLogger(HttpDispatcher.class);
   private final HttpResourceHandler httpMethodHandler;
-  BodyConsumer streamer;
-  private boolean keepAlive;
+  private static final int CHUNK_MEMORY_LIMIT = 1024 * 1024 * 1024;
 
-  public HttpDispatcher(HttpResourceHandler methodHandler) {
+  public RequestRouter(HttpResourceHandler methodHandler) {
     this.httpMethodHandler = methodHandler;
-    this.keepAlive = true;
-    this.streamer = null;
   }
 
   @Override
   public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
     Object message = e.getMessage();
-    Channel channel = ctx.getChannel();
-    Method destHandler = NettyHttpService.invokeMethod.get(ctx.getChannel());
-
-    if(destHandler.getReturnType().equals(BodyConsumer.class)){
-      if( (message instanceof HttpMessage) || (message instanceof HttpRequest)){
-        Object msg = e.getMessage();
-        HttpMessage httpMessage = (HttpMessage) msg;
-        this.keepAlive = HttpHeaders.isKeepAlive(httpMessage);
-        this.streamer = (BodyConsumer) destHandler.invoke(NettyHttpService.invokeHandler.get(channel),
-                                                                  NettyHttpService.invokeArgs.get(channel));
-        this.streamer.chunk(((HttpMessage) msg).getContent(),
-                       new BasicHttpResponder(channel, HttpHeaders.isKeepAlive(httpMessage)));
-      }
-    else if (message instanceof HttpChunk) {
-          Object msg = e.getMessage();
-          HttpChunk httpChunk = (HttpChunk) msg;
-          if(httpChunk.isLast()){
-            this.streamer.finished(new BasicHttpResponder(channel,this.keepAlive));
-          }
-        else {
-            this.streamer.chunk(httpChunk.getContent(), new BasicHttpResponder(channel, this.keepAlive));
-          }
-        }
+    if (!(message instanceof HttpRequest)) {
+      super.messageReceived(ctx, e);
+      return;
     }
-    else {
-      if(message instanceof HttpRequest){
-        destHandler.invoke(NettyHttpService.invokeHandler.get(channel), NettyHttpService.invokeArgs.get(channel));
-      }
-      else {
-          super.messageReceived(ctx, e);
-          return;
-      }
-    }
-    //handleRequest((HttpRequest) message, ctx.getChannel());
+    handleRequest((HttpRequest) message, ctx.getChannel());
+    ctx.sendUpstream(e);
   }
 
   private void handleRequest(HttpRequest httpRequest, Channel channel) {
     Preconditions.checkNotNull(httpMethodHandler, "Http Handler factory cannot be null");
-    httpMethodHandler.handle(httpRequest, new BasicHttpResponder(channel, HttpHeaders.isKeepAlive(httpRequest)),channel);
-    //channel.getPipeline().getContext("")
+
+    // If the request is of type BodyConsumer we will stream , otherwise we will use chunkAggregator
+
+    Method handlerMethod = httpMethodHandler.getDestinationMethod(httpRequest, new BasicHttpResponder(channel, HttpHeaders.isKeepAlive(httpRequest)));
+    NettyHttpService.invokeMethod.set(channel,handlerMethod);
+    if (handlerMethod.getReturnType().equals(BodyConsumer.class))
+    {
+      if(channel.getPipeline().get("aggregator") !=null) {
+        channel.getPipeline().remove("aggregator");
+      }
+    }
+    else{
+      if(channel.getPipeline().get("aggregator") == null) {
+        channel.getPipeline().addAfter("router", "aggregator", new HttpChunkAggregator(CHUNK_MEMORY_LIMIT));
+      }
+    }
+
   }
 
   @Override

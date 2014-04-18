@@ -70,6 +70,9 @@ public class BasicHttpResponder implements HttpResponder {
     this.keepalive = keepalive;
   }
 
+  public Channel getChannel(){
+    return channel;
+  }
   /**
    * Sends json response back to the client.
    * @param status Status of the response.
