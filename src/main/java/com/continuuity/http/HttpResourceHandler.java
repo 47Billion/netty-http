@@ -201,6 +201,7 @@ public final class HttpResourceHandler implements HttpHandler {
 
 
   public Method getDestinationMethod(HttpRequest request, HttpResponder responder){
+    BasicHttpResponder oldResponder = (BasicHttpResponder) responder;
 
     if (urlRewriter != null) {
       try {
@@ -244,9 +245,8 @@ public final class HttpResourceHandler implements HttpHandler {
         // Call httpresource method
         if (!terminated) {
           // Wrap responder to make post hook calls.
-          BasicHttpResponder oldResponder = (BasicHttpResponder) responder;
           responder = new WrappedHttpResponder(responder, handlerHooks, request, info);
-          Method result = httpResourceModel.handle(request,responder,matchedDestination.getGroupNameValues(),oldResponder);
+          Method result = httpResourceModel.handle(request, responder, matchedDestination.getGroupNameValues(), oldResponder);
           return result;
         }
       } else if (routableDestinations.size() > 0)  {

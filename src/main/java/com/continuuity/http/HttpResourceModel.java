@@ -131,9 +131,9 @@ public final class HttpResourceModel {
 
 
           Channel channel = basicHttpResponder.getChannel();
-          NettyHttpService.invokeMethod.set(channel,method);
-          NettyHttpService.invokeArgs.set(channel,args);
-          NettyHttpService.invokeHandler.set(channel,handler);
+          NettyHttpService.invokeMethod.set(channel, method);
+          NettyHttpService.invokeArgs.set(channel, args);
+          NettyHttpService.invokeHandler.set(channel, handler);
 
         return method;
 

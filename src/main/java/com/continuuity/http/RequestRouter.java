@@ -52,29 +52,33 @@ public class RequestRouter extends SimpleChannelUpstreamHandler {
       super.messageReceived(ctx, e);
       return;
     }
-    handleRequest((HttpRequest) message, ctx.getChannel());
-    ctx.sendUpstream(e);
+    if (handleRequest((HttpRequest) message, ctx.getChannel())) {
+      ctx.sendUpstream(e);
+    }
+
   }
 
-  private void handleRequest(HttpRequest httpRequest, Channel channel) {
+  private boolean handleRequest(HttpRequest httpRequest, Channel channel) {
     Preconditions.checkNotNull(httpMethodHandler, "Http Handler factory cannot be null");
 
     // If the request is of type BodyConsumer we will stream , otherwise we will use chunkAggregator
 
     Method handlerMethod = httpMethodHandler.getDestinationMethod(httpRequest, new BasicHttpResponder(channel, HttpHeaders.isKeepAlive(httpRequest)));
-    NettyHttpService.invokeMethod.set(channel,handlerMethod);
+    if (handlerMethod == null)
+        return false;
+    NettyHttpService.invokeMethod.set(channel, handlerMethod);
     if (handlerMethod.getReturnType().equals(BodyConsumer.class))
     {
-      if(channel.getPipeline().get("aggregator") !=null) {
+      if (channel.getPipeline().get("aggregator") !=null) {
         channel.getPipeline().remove("aggregator");
       }
     }
     else{
-      if(channel.getPipeline().get("aggregator") == null) {
+      if (channel.getPipeline().get("aggregator") == null) {
         channel.getPipeline().addAfter("router", "aggregator", new HttpChunkAggregator(CHUNK_MEMORY_LIMIT));
       }
     }
-
+    return true;
   }
 
   @Override

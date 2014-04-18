@@ -88,9 +88,9 @@ public class HttpDispatcher extends SimpleChannelUpstreamHandler {
     //handleRequest((HttpRequest) message, ctx.getChannel());
   }
 
-  private void handleRequest(HttpRequest httpRequest, Channel channel) {
-    Preconditions.checkNotNull(httpMethodHandler, "Http Handler factory cannot be null");
-    httpMethodHandler.handle(httpRequest, new BasicHttpResponder(channel, HttpHeaders.isKeepAlive(httpRequest)),channel);
+  /*private void handleRequest(HttpRequest httpRequest, Channel channel) {
+    //Preconditions.checkNotNull(httpMethodHandler, "Http Handler factory cannot be null");
+    //httpMethodHandler.handle(httpRequest, new BasicHttpResponder(channel, HttpHeaders.isKeepAlive(httpRequest)),channel);
     //channel.getPipeline().getContext("")
   }
 
@@ -98,5 +98,5 @@ public class HttpDispatcher extends SimpleChannelUpstreamHandler {
   public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
     LOG.error("Exception caught in channel processing.", e.getCause());
     ctx.getChannel().close();
-  }
+  }*/
 }
