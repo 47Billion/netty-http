@@ -99,8 +99,7 @@ public final class HttpResourceModel {
    * @param responder HttpResponder to write the response.
    * @param groupValues Values needed for the invocation.
    */
-  public Method handle(HttpRequest request, HttpResponder responder, Map<String, String> groupValues,
-                       BasicHttpResponder basicHttpResponder){
+  public HttpMethodInfo handle(HttpRequest request, HttpResponder responder, Map<String, String> groupValues){
     //TODO: Refactor group values.
     try {
       if (httpMethods.contains(request.getMethod())){
@@ -127,26 +126,12 @@ public final class HttpResourceModel {
           Preconditions.checkArgument(method.getParameterTypes().length == parameterIndex + 1,
                                       "Could not resolve all parameters for method %s", method.getName());
         }
+     HttpMethodInfo methodInfo = new HttpMethodInfo(method, handler, args);
+          return methodInfo;
 
-
-
-          Channel channel = basicHttpResponder.getChannel();
-          NettyHttpService.invokeMethod.set(channel, method);
-          NettyHttpService.invokeArgs.set(channel, args);
-          NettyHttpService.invokeHandler.set(channel, handler);
-
-        return method;
-
-        /*if (method.getReturnType().equals(BodyConsumer.class)){
-
-        }
-        else {
-          method.invoke(handler, args);
-        }*/
       } else {
         //Found a matching resource but could not find the right HttpMethod so return 405
-        responder.sendError(HttpResponseStatus.METHOD_NOT_ALLOWED,
-                            String.format("Problem accessing: %s. Reason: Method Not Allowed", request.getUri()));
+        responder.sendError(HttpResponseStatus.METHOD_NOT_ALLOWED, String.format("Problem accessing: %s. Reason: Method Not Allowed", request.getUri()));
       }
     } catch (Throwable e) {
       LOG.error("Error processing path {} {}", request.getUri(), e, e);

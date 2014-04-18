@@ -19,13 +19,17 @@ package com.continuuity.http;
 import com.google.common.base.Preconditions;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
+import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMessage;
 import org.jboss.netty.handler.codec.http.HttpRequest;
+import org.jboss.netty.handler.codec.http.HttpResponse;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,53 +54,64 @@ public class HttpDispatcher extends SimpleChannelUpstreamHandler {
   }
 
   @Override
-  public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
-    Object message = e.getMessage();
-    Channel channel = ctx.getChannel();
-    Method destHandler = NettyHttpService.invokeMethod.get(ctx.getChannel());
+  public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {
+    HttpMethodInfo methodInfo;
+    try {
+      Object message = e.getMessage();
+      Channel channel = ctx.getChannel();
 
-    if(destHandler.getReturnType().equals(BodyConsumer.class)){
-      if( (message instanceof HttpMessage) || (message instanceof HttpRequest)){
-        Object msg = e.getMessage();
-        HttpMessage httpMessage = (HttpMessage) msg;
-        this.keepAlive = HttpHeaders.isKeepAlive(httpMessage);
-        this.streamer = (BodyConsumer) destHandler.invoke(NettyHttpService.invokeHandler.get(channel),
-                                                                  NettyHttpService.invokeArgs.get(channel));
-        this.streamer.chunk(((HttpMessage) msg).getContent(),
-                       new BasicHttpResponder(channel, HttpHeaders.isKeepAlive(httpMessage)));
-      }
-    else if (message instanceof HttpChunk) {
+      methodInfo = (HttpMethodInfo) ctx.getPipeline().getContext("router").getAttachment();
+      Method destHandler = methodInfo.getMethod();
+      if (destHandler.getReturnType().equals(BodyConsumer.class)) {
+        if ((message instanceof HttpMessage) || (message instanceof HttpRequest)) {
+          Object msg = e.getMessage();
+          HttpMessage httpMessage = (HttpMessage) msg;
+          this.keepAlive = HttpHeaders.isKeepAlive(httpMessage);
+          if (this.streamer == null) {
+            this.streamer = (BodyConsumer) destHandler.invoke(methodInfo.getHandler(), methodInfo.getArgs());
+            this.streamer.chunk(((HttpMessage) msg).getContent(), new BasicHttpResponder(channel, HttpHeaders.isKeepAlive(httpMessage)));
+          }
+        } else if (message instanceof HttpChunk) {
           Object msg = e.getMessage();
           HttpChunk httpChunk = (HttpChunk) msg;
-          if(httpChunk.isLast()){
-            this.streamer.finished(new BasicHttpResponder(channel,this.keepAlive));
-          }
-        else {
-            this.streamer.chunk(httpChunk.getContent(), new BasicHttpResponder(channel, this.keepAlive));
+          if (this.streamer != null) {
+            if (httpChunk.isLast()) {
+              this.streamer.finished(new BasicHttpResponder(channel, this.keepAlive));
+            } else {
+              this.streamer.chunk(httpChunk.getContent(), new BasicHttpResponder(channel, this.keepAlive));
+            }
           }
         }
-    }
-    else {
-      if(message instanceof HttpRequest){
-        destHandler.invoke(NettyHttpService.invokeHandler.get(channel), NettyHttpService.invokeArgs.get(channel));
-      }
-      else {
+      } else {
+        if (message instanceof HttpRequest) {
+          destHandler.invoke(methodInfo.getHandler(), methodInfo.getArgs());
+        } else {
           super.messageReceived(ctx, e);
           return;
+        }
       }
+    } catch (Exception Ex) {
+       methodInfo = (HttpMethodInfo) ctx.getPipeline().getContext("router").getAttachment();
+       methodInfo.getResponder().sendError(HttpResponseStatus.INTERNAL_SERVER_ERROR,
+                                           String.format("Error in executing path:"));
+      /*Object msg = e.getMessage();
+      HttpRequest request = (HttpRequest) msg;
+      HttpResponse response = new DefaultHttpResponse(request.getProtocolVersion(), HttpResponseStatus.INTERNAL_SERVER_ERROR);
+      Channels.write(ctx.getChannel(), response);*/
     }
-    //handleRequest((HttpRequest) message, ctx.getChannel());
   }
 
   /*private void handleRequest(HttpRequest httpRequest, Channel channel) {
     //Preconditions.checkNotNull(httpMethodHandler, "Http Handler factory cannot be null");
     //httpMethodHandler.handle(httpRequest, new BasicHttpResponder(channel, HttpHeaders.isKeepAlive(httpRequest)),channel);
     //channel.getPipeline().getContext("")
+=======
+>>>>>>> Stashed changes
   }
-
+   */
   @Override
   public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
     LOG.error("Exception caught in channel processing.", e.getCause());
     ctx.getChannel().close();
-  }*/
+  }
 }

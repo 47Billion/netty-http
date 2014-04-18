@@ -201,10 +201,10 @@ public final class NettyHttpService extends AbstractIdleService {
         ChannelPipeline pipeline = Channels.pipeline();
 
         pipeline.addLast("tracker", connectionTracker);
+        pipeline.addLast("compressor", new HttpContentCompressor());
+        pipeline.addLast("encoder", new HttpResponseEncoder());
         pipeline.addLast("decoder", new HttpRequestDecoder());
         pipeline.addLast("router", new RequestRouter(resourceHandler));
-        pipeline.addLast("encoder", new HttpResponseEncoder());
-        pipeline.addLast("compressor", new HttpContentCompressor());
         if (executionHandler != null) {
           pipeline.addLast("executor", executionHandler);
         }

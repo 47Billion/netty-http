@@ -96,7 +96,7 @@ public final class HttpResourceHandler implements HttpHandler {
           patternRouter.add(absolutePath, new HttpResourceModel(httpMethods, absolutePath, method, handler));
         } else {
           LOG.trace("Not adding method {}({}) to path routing like. HTTP calls will not be routed to this method",
-                   method.getName(), method.getParameterTypes());
+                    method.getName(), method.getParameterTypes());
         }
       }
     }
@@ -179,9 +179,8 @@ public final class HttpResourceHandler implements HttpHandler {
         // Call httpresource method
         if (!terminated) {
           // Wrap responder to make post hook calls.
-          BasicHttpResponder basicResponder = (BasicHttpResponder) responder;
           responder = new WrappedHttpResponder(responder, handlerHooks, request, info);
-          httpResourceModel.handle(request, responder, matchedDestination.getGroupNameValues(), basicResponder);
+          httpResourceModel.handle(request, responder, matchedDestination.getGroupNameValues());
         }
       } else if (routableDestinations.size() > 0)  {
         //Found a matching resource but could not find the right HttpMethod so return 405
@@ -199,10 +198,15 @@ public final class HttpResourceHandler implements HttpHandler {
     }
   }
 
-
-  public Method getDestinationMethod(HttpRequest request, HttpResponder responder){
-    BasicHttpResponder oldResponder = (BasicHttpResponder) responder;
-
+  /**
+   * Call the appropriate handler for handling the httprequest. 404 if path is not found. 405 if path is found but
+   * httpMethod does not match what's configured.
+   *
+   * @param request instance of {@code HttpRequest}
+   * @param responder instance of {@code HttpResponder} to handle the request.
+   */
+  public HttpMethodInfo getDestinationMethod(HttpRequest request, HttpResponder responder){
+    BasicHttpResponder basicResponder = (BasicHttpResponder) responder;
     if (urlRewriter != null) {
       try {
         request.setUri(URI.create(request.getUri()).normalize().toString());
@@ -210,10 +214,9 @@ public final class HttpResourceHandler implements HttpHandler {
           return null;
         }
       } catch (Throwable t) {
-        responder.sendError(HttpResponseStatus.INTERNAL_SERVER_ERROR,
-                            String.format("Caught exception processing request. Reason: %s",
-                                          t.getMessage()));
         LOG.error("Exception thrown during rewriting of uri {}", request.getUri(), t);
+        responder.sendError(HttpResponseStatus.INTERNAL_SERVER_ERROR,
+                            String.format("Caught exception processing request. Reason: %s", t.getMessage()));
         return null;
       }
     }
@@ -246,7 +249,8 @@ public final class HttpResourceHandler implements HttpHandler {
         if (!terminated) {
           // Wrap responder to make post hook calls.
           responder = new WrappedHttpResponder(responder, handlerHooks, request, info);
-          Method result = httpResourceModel.handle(request, responder, matchedDestination.getGroupNameValues(), oldResponder);
+          HttpMethodInfo result = httpResourceModel.handle(request, responder, matchedDestination.getGroupNameValues());
+          result.setResponder((WrappedHttpResponder) responder);
           return result;
         }
       } else if (routableDestinations.size() > 0)  {

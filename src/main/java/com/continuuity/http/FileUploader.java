@@ -99,7 +99,7 @@ public class FileUploader extends Thread {
 
     @Path("/upload")
     @PUT
-    public BodyConsumer upload(HttpRequest request,HttpResponder responder){
+    public BodyConsumer upload(HttpRequest request, HttpResponder responder){
 
       return new BodyConsumer() {
         ByteBuffer offHeapBuffer = ByteBuffer.allocateDirect(MAX_INPUT_SIZE);
@@ -112,7 +112,7 @@ public class FileUploader extends Thread {
         @Override
         public void finished(HttpResponder responder) {
           int bytesUploaded = offHeapBuffer.position();
-          responder.sendString(HttpResponseStatus.OK,"Uploaded " + bytesUploaded + " bytes");
+          responder.sendString(HttpResponseStatus.OK, "Uploaded " + bytesUploaded + " bytes");
           return;
         }
       };
@@ -142,7 +142,7 @@ public class FileUploader extends Thread {
       }
       try {
         args = GSON.fromJson(reader, MAP_STRING_STRING_TYPE);
-        if(args == null)
+        if (args == null)
           return null;
         else{
           if (!args.isEmpty()) {

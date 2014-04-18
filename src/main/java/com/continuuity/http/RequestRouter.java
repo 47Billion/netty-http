@@ -19,12 +19,17 @@ package com.continuuity.http;
 import com.google.common.base.Preconditions;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
+import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpChunkAggregator;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpRequest;
+import org.jboss.netty.handler.codec.http.HttpResponse;
+import org.jboss.netty.handler.codec.http.HttpResponseEncoder;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,28 +57,29 @@ public class RequestRouter extends SimpleChannelUpstreamHandler {
       super.messageReceived(ctx, e);
       return;
     }
-    if (handleRequest((HttpRequest) message, ctx.getChannel())) {
-      ctx.sendUpstream(e);
-    }
 
+    HttpRequest request = (HttpRequest) message;
+    if (handleRequest(request, ctx.getChannel(), ctx)) {
+      ctx.sendUpstream(e);
+    } else {
+      Channel channel = ctx.getChannel();
+      HttpResponse response = new DefaultHttpResponse(request.getProtocolVersion(), HttpResponseStatus.OK);
+      Channels.write(channel, response);
+    }
   }
 
-  private boolean handleRequest(HttpRequest httpRequest, Channel channel) {
-    Preconditions.checkNotNull(httpMethodHandler, "Http Handler factory cannot be null");
+  private boolean handleRequest(HttpRequest httpRequest, Channel channel, ChannelHandlerContext ctx) {
 
-    // If the request is of type BodyConsumer we will stream , otherwise we will use chunkAggregator
-
-    Method handlerMethod = httpMethodHandler.getDestinationMethod(httpRequest, new BasicHttpResponder(channel, HttpHeaders.isKeepAlive(httpRequest)));
-    if (handlerMethod == null)
-        return false;
-    NettyHttpService.invokeMethod.set(channel, handlerMethod);
-    if (handlerMethod.getReturnType().equals(BodyConsumer.class))
-    {
-      if (channel.getPipeline().get("aggregator") !=null) {
+    HttpMethodInfo methodInfo= httpMethodHandler.getDestinationMethod(httpRequest, new BasicHttpResponder(channel, HttpHeaders.isKeepAlive(httpRequest)));
+    if (methodInfo == null) {
+      return false;
+    }
+    ctx.setAttachment(methodInfo);
+    if (methodInfo.getMethod().getReturnType().equals(BodyConsumer.class)){
+      if (channel.getPipeline().get("aggregator") != null) {
         channel.getPipeline().remove("aggregator");
       }
-    }
-    else{
+    } else {
       if (channel.getPipeline().get("aggregator") == null) {
         channel.getPipeline().addAfter("router", "aggregator", new HttpChunkAggregator(CHUNK_MEMORY_LIMIT));
       }
