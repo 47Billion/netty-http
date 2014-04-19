@@ -25,7 +25,6 @@ import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelLocal;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
@@ -34,20 +33,16 @@ import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.channel.group.ChannelGroup;
 import org.jboss.netty.channel.group.DefaultChannelGroup;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
-import org.jboss.netty.handler.codec.http.HttpChunkAggregator;
 import org.jboss.netty.handler.codec.http.HttpContentCompressor;
 import org.jboss.netty.handler.codec.http.HttpRequestDecoder;
 import org.jboss.netty.handler.codec.http.HttpResponseEncoder;
 import org.jboss.netty.handler.execution.ExecutionHandler;
 import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
-import org.jboss.netty.handler.stream.ChunkedWriteHandler;
-import java.lang.reflect.Method;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionHandler;
@@ -63,16 +58,8 @@ import java.util.concurrent.atomic.AtomicLong;
 public final class NettyHttpService extends AbstractIdleService {
 
   private static final Logger LOG  = LoggerFactory.getLogger(NettyHttpService.class);
-  private static final int MAX_INPUT_SIZE = 1024 * 1024 * 1024;
 
   private static final int CLOSE_CHANNEL_TIMEOUT = 5;
-
-  public static final ChannelLocal<Method> invokeMethod = new ChannelLocal();
-  public static final ChannelLocal<Object[]> invokeArgs = new ChannelLocal();
-  public static final ChannelLocal<HttpHandler  > invokeHandler = new ChannelLocal();
-
-
-
   private final int bossThreadPoolSize;
   private final int workerThreadPoolSize;
   private final int execThreadPoolSize;
