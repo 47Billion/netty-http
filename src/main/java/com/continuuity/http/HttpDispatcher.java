@@ -32,7 +32,7 @@ import org.slf4j.LoggerFactory;
 import java.lang.reflect.Method;
 
 /**
- * HttpDispatcher that invokes the appropriate http-handler method. The handler and the arguments are passed
+ * HttpDispatcher that invokes the appropriate http-handler method. The handler and the arguments are read
  * from the {@code RequestRouter} context.
  */
 
@@ -65,7 +65,8 @@ public class HttpDispatcher extends SimpleChannelUpstreamHandler {
           this.keepAlive = HttpHeaders.isKeepAlive(httpMessage);
           if (this.streamer == null) {
             this.streamer = (BodyConsumer) destHandler.invoke(methodInfo.getHandler(), methodInfo.getArgs());
-            this.streamer.chunk(((HttpMessage) msg).getContent(), new BasicHttpResponder(channel, HttpHeaders.isKeepAlive(httpMessage)));
+            this.streamer.chunk(((HttpMessage) msg).getContent(), new BasicHttpResponder
+              (channel, HttpHeaders.isKeepAlive(httpMessage)));
           }
         } else if (message instanceof HttpChunk) {
           Object msg = e.getMessage();
@@ -86,7 +87,7 @@ public class HttpDispatcher extends SimpleChannelUpstreamHandler {
           return;
         }
       }
-    } catch (Exception Ex) {
+    } catch (Exception ex) {
        methodInfo = (HttpMethodInfo) ctx.getPipeline().getContext("router").getAttachment();
        methodInfo.getResponder().sendError(HttpResponseStatus.INTERNAL_SERVER_ERROR,
                                            String.format("Error in executing path:"));

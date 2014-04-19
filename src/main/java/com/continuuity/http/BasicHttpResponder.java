@@ -70,9 +70,6 @@ public class BasicHttpResponder implements HttpResponder {
     this.keepalive = keepalive;
   }
 
-  public Channel getChannel(){
-    return channel;
-  }
   /**
    * Sends json response back to the client.
    * @param status Status of the response.
@@ -291,8 +288,8 @@ public class BasicHttpResponder implements HttpResponder {
     channel.write(response);
 
     // Write the content.
-    ChannelFuture writeFuture;
 
+    ChannelFuture writeFuture;
     try {
       FileChannel fc = new RandomAccessFile(file, "r").getChannel();
 

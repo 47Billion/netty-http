@@ -18,16 +18,12 @@ package com.continuuity.http;
 
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpChunkAggregator;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpRequest;
-import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,6 +43,13 @@ public class RequestRouter extends SimpleChannelUpstreamHandler {
     this.httpMethodHandler = methodHandler;
   }
 
+  /**
+   * If the HttpRequest is valid and handled it will be sent upstream, if it cannot be invoked
+   * the response will be written back immediately.
+   * @param ctx
+   * @param e
+   * @throws Exception
+   */
   @Override
   public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
     Object message = e.getMessage();
@@ -54,17 +57,14 @@ public class RequestRouter extends SimpleChannelUpstreamHandler {
       super.messageReceived(ctx, e);
       return;
     }
-
     HttpRequest request = (HttpRequest) message;
     if (handleRequest(request, ctx.getChannel(), ctx)) {
       ctx.sendUpstream(e);
-    } else {
-      Channel channel = ctx.getChannel();
-      HttpResponse response = new DefaultHttpResponse(request.getProtocolVersion(), HttpResponseStatus.OK);
-      Channels.write(channel, response);
     }
   }
 
+  //If return type of the handler http method is BodyConsumer, remove "HttpChunkAggregator" class if it exits
+  //Else add the HttpChunkAggregator to the pipeline if its not present already.
   private boolean handleRequest(HttpRequest httpRequest, Channel channel, ChannelHandlerContext ctx) {
 
     HttpMethodInfo methodInfo = httpMethodHandler.getDestinationMethod(

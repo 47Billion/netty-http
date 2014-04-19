@@ -125,7 +125,8 @@ public final class HttpResourceModel {
 
       } else {
         //Found a matching resource but could not find the right HttpMethod so return 405
-        responder.sendError(HttpResponseStatus.METHOD_NOT_ALLOWED, String.format("Problem accessing: %s. Reason: Method Not Allowed", request.getUri()));
+        responder.sendError(HttpResponseStatus.METHOD_NOT_ALLOWED, String.format
+          ("Problem accessing: %s. Reason: Method Not Allowed", request.getUri()));
       }
     } catch (Throwable e) {
       LOG.error("Error processing path {} {}", request.getUri(), e, e);
