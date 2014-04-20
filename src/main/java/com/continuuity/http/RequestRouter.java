@@ -30,14 +30,15 @@ import org.slf4j.LoggerFactory;
 /**
  * RequestRouter that uses {@code HttpMethodHandler} to determine the http-handler method Signature of http request. It
  * uses this signature to dynamically configure the Netty Pipeline. Http Handler methods with return-type BodyConsumer
- * will be streamed , while other methods use HttpChunkAggregator
+ * will be streamed , while other methods will use HttpChunkAggregator
  */
 
 public class RequestRouter extends SimpleChannelUpstreamHandler {
 
   private static final Logger LOG = LoggerFactory.getLogger(HttpDispatcher.class);
+  private static final int CHUNK_MEMORY_LIMIT = 64 * 1024;
+
   private final HttpResourceHandler httpMethodHandler;
-  private static final int CHUNK_MEMORY_LIMIT = 1024 * 1024 * 1024;
 
   public RequestRouter(HttpResourceHandler methodHandler) {
     this.httpMethodHandler = methodHandler;
@@ -63,8 +64,10 @@ public class RequestRouter extends SimpleChannelUpstreamHandler {
     }
   }
 
-  //If return type of the handler http method is BodyConsumer, remove "HttpChunkAggregator" class if it exits
-  //Else add the HttpChunkAggregator to the pipeline if its not present already.
+  /**
+   * If return type of the handler http method is BodyConsumer, remove "HttpChunkAggregator" class if it exits
+   * Else add the HttpChunkAggregator to the pipeline if its not present already.
+   */
   private boolean handleRequest(HttpRequest httpRequest, Channel channel, ChannelHandlerContext ctx) {
 
     HttpMethodInfo methodInfo = httpMethodHandler.getDestinationMethod(
@@ -74,7 +77,7 @@ public class RequestRouter extends SimpleChannelUpstreamHandler {
       return false;
     }
     ctx.setAttachment(methodInfo);
-    if (methodInfo.getMethod().getReturnType().equals(BodyConsumer.class)){
+    if (methodInfo.isStreaming()) {
       if (channel.getPipeline().get("aggregator") != null) {
         channel.getPipeline().remove("aggregator");
       }

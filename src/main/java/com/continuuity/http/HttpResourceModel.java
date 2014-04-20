@@ -93,7 +93,7 @@ public final class HttpResourceModel {
    * @param responder HttpResponder to write the response.
    * @param groupValues Values needed for the invocation.
    */
-  public HttpMethodInfo handle(HttpRequest request, HttpResponder responder, Map<String, String> groupValues){
+  public HttpMethodInfo handle(HttpRequest request, HttpResponder responder, Map<String, String> groupValues) {
     //TODO: Refactor group values.
     try {
       if (httpMethods.contains(request.getMethod())){
@@ -107,22 +107,20 @@ public final class HttpResourceModel {
         if (method.getParameterTypes().length > 2) {
           Class<?>[] parameterTypes = method.getParameterTypes();
           for (Annotation[] annotations : method.getParameterAnnotations()) {
-             for (Annotation annotation : annotations){
-               if (annotation.annotationType().isAssignableFrom(PathParam.class)){
-                 PathParam param = (PathParam) annotation;
-                 String value = groupValues.get(param.value());
-                 Preconditions.checkArgument(value != null, "Could not resolve value for parameter %s", param.value());
-                 parameterIndex++;
-                 args[parameterIndex] = ConvertUtils.convert(value, parameterTypes[parameterIndex]);
-               }
-             }
+            for (Annotation annotation : annotations){
+              if (annotation.annotationType().isAssignableFrom(PathParam.class)){
+                PathParam param = (PathParam) annotation;
+                String value = groupValues.get(param.value());
+                Preconditions.checkArgument(value != null, "Could not resolve value for parameter %s", param.value());
+                parameterIndex++;
+                args[parameterIndex] = ConvertUtils.convert(value, parameterTypes[parameterIndex]);
+              }
+            }
           }
           Preconditions.checkArgument(method.getParameterTypes().length == parameterIndex + 1,
                                       "Could not resolve all parameters for method %s", method.getName());
         }
-     HttpMethodInfo methodInfo = new HttpMethodInfo(method, handler, args);
-          return methodInfo;
-
+        return new HttpMethodInfo(method, handler, args, (WrappedHttpResponder) responder);
       } else {
         //Found a matching resource but could not find the right HttpMethod so return 405
         responder.sendError(HttpResponseStatus.METHOD_NOT_ALLOWED, String.format

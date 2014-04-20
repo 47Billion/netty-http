@@ -66,8 +66,6 @@ public final class NettyHttpService extends AbstractIdleService {
   private final long execThreadKeepAliveSecs;
   private final Map<String, Object> channelConfigs;
   private final RejectedExecutionHandler rejectedExecutionHandler;
-
-  private ChannelPipeline pipeline;
   private final HandlerContext handlerContext;
   private final ChannelGroup channelGroup;
   private final HttpResourceHandler resourceHandler;
@@ -150,10 +148,8 @@ public final class NettyHttpService extends AbstractIdleService {
    */
   private void bootStrap(int threadPoolSize, long threadKeepAliveSecs) {
 
-
     final ExecutionHandler executionHandler = (threadPoolSize) > 0 ?
       createExecutionHandler(threadPoolSize, threadKeepAliveSecs) : null;
-
 
     Executor bossExecutor = Executors.newFixedThreadPool(bossThreadPoolSize,
                                                          new ThreadFactoryBuilder()
@@ -163,9 +159,9 @@ public final class NettyHttpService extends AbstractIdleService {
 
     Executor workerExecutor = Executors.newFixedThreadPool(workerThreadPoolSize,
                                                            new ThreadFactoryBuilder()
-                                                            .setDaemon(true)
-                                                            .setNameFormat("netty-worker-thread")
-                                                            .build());
+                                                             .setDaemon(true)
+                                                             .setNameFormat("netty-worker-thread")
+                                                             .build());
 
     //Server bootstrap with default worker threads (2 * number of cores)
     bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(bossExecutor, bossThreadPoolSize,
@@ -195,13 +191,11 @@ public final class NettyHttpService extends AbstractIdleService {
         if (executionHandler != null) {
           pipeline.addLast("executor", executionHandler);
         }
-        pipeline.addLast("dispatcher", new HttpDispatcher(resourceHandler));
+        pipeline.addLast("dispatcher", new HttpDispatcher());
 
         return pipeline;
       }
     });
-
-
   }
 
   public static Builder builder() {
@@ -215,13 +209,7 @@ public final class NettyHttpService extends AbstractIdleService {
     Channel channel = bootstrap.bind(bindAddress);
     channelGroup.add(channel);
     bindAddress = ((InetSocketAddress) channel.getLocalAddress());
-    pipeline = bootstrap.getPipelineFactory().getPipeline();
-
     LOG.info("Started service on address {}", bindAddress);
-  }
-
-  public ChannelPipeline getPipeline(){
-    return pipeline;
   }
 
   /**

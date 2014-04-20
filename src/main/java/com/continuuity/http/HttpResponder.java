@@ -149,6 +149,4 @@ public interface HttpResponder {
    * @param headers
    */
   void sendFile(File file, Multimap<String, String> headers);
-
-
 }

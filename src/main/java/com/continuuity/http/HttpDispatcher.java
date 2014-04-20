@@ -29,8 +29,6 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.lang.reflect.Method;
-
 /**
  * HttpDispatcher that invokes the appropriate http-handler method. The handler and the arguments are read
  * from the {@code RequestRouter} context.
@@ -39,58 +37,58 @@ import java.lang.reflect.Method;
 public class HttpDispatcher extends SimpleChannelUpstreamHandler {
 
   private static final Logger LOG = LoggerFactory.getLogger(HttpDispatcher.class);
-  private final HttpResourceHandler httpMethodHandler;
-  BodyConsumer streamer;
-  private boolean keepAlive;
 
-  public HttpDispatcher(HttpResourceHandler methodHandler) {
-    this.httpMethodHandler = methodHandler;
-    this.keepAlive = true;
-    this.streamer = null;
-  }
+  private BodyConsumer streamer;
+  private boolean keepAlive;
 
   @Override
   public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {
-    HttpMethodInfo methodInfo;
+    HttpMethodInfo methodInfo  = (HttpMethodInfo) ctx.getPipeline().getContext("router").getAttachment();
     try {
       Object message = e.getMessage();
       Channel channel = ctx.getChannel();
-
-      methodInfo = (HttpMethodInfo) ctx.getPipeline().getContext("router").getAttachment();
-      Method destHandler = methodInfo.getMethod();
-      if (destHandler.getReturnType().equals(BodyConsumer.class)) {
-        if ((message instanceof HttpMessage) || (message instanceof HttpRequest)) {
-          Object msg = e.getMessage();
-          HttpMessage httpMessage = (HttpMessage) msg;
+      if (methodInfo.isStreaming()) {
+        //streaming
+        if (message instanceof HttpMessage) {
+          HttpMessage httpMessage = (HttpMessage) message;
           this.keepAlive = HttpHeaders.isKeepAlive(httpMessage);
-          if (this.streamer == null) {
-            this.streamer = (BodyConsumer) destHandler.invoke(methodInfo.getHandler(), methodInfo.getArgs());
-            this.streamer.chunk(((HttpMessage) msg).getContent(), new BasicHttpResponder
-              (channel, HttpHeaders.isKeepAlive(httpMessage)));
+          this.streamer = methodInfo.invokeStreamingMethod();
+          this.streamer.chunk(httpMessage.getContent(),
+                              new BasicHttpResponder(channel, HttpHeaders.isKeepAlive(httpMessage)));
+          if (!httpMessage.isChunked()){
+            // Message is not chunked, this is the only packet, we should call finish now and set streamer to null.
+            this.streamer.finished(new BasicHttpResponder(channel, HttpHeaders.isKeepAlive(httpMessage)));
+            this.streamer = null;
           }
         } else if (message instanceof HttpChunk) {
-          Object msg = e.getMessage();
-          HttpChunk httpChunk = (HttpChunk) msg;
-          if (this.streamer != null) {
-            if (httpChunk.isLast()) {
-              this.streamer.finished(new BasicHttpResponder(channel, this.keepAlive));
-            } else {
-              this.streamer.chunk(httpChunk.getContent(), new BasicHttpResponder(channel, this.keepAlive));
-            }
+          HttpChunk httpChunk = (HttpChunk) message;
+          if (this.streamer == null){
+            // Received a chunk not belonging to a HttpMessage.
+            throw new IllegalStateException(
+              "received " + HttpChunk.class.getSimpleName() +
+                " without " + HttpMessage.class.getSimpleName());
           }
-        }
-      } else {
-        if (message instanceof HttpRequest) {
-          destHandler.invoke(methodInfo.getHandler(), methodInfo.getArgs());
+          if (httpChunk.isLast()) {
+            //last chunk, end of streaming.
+            this.streamer.finished(new BasicHttpResponder(channel, this.keepAlive));
+            this.streamer = null;
+          } else {
+            this.streamer.chunk(httpChunk.getContent(), new BasicHttpResponder(channel, this.keepAlive));
+          }
         } else {
           super.messageReceived(ctx, e);
-          return;
+        }
+      } else {
+        // http method without streaming. typical invocation.
+        if (message instanceof HttpRequest) {
+          methodInfo.invoke();
+        } else {
+          super.messageReceived(ctx, e);
         }
       }
     } catch (Exception ex) {
-       methodInfo = (HttpMethodInfo) ctx.getPipeline().getContext("router").getAttachment();
-       methodInfo.getResponder().sendError(HttpResponseStatus.INTERNAL_SERVER_ERROR,
-                                           String.format("Error in executing path:"));
+      methodInfo.sendError(HttpResponseStatus.INTERNAL_SERVER_ERROR,
+                           String.format("Error in executing path:"));
     }
   }
 
