@@ -16,16 +16,17 @@
 
 package com.continuuity.http;
 
+import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
 /**
  * HttpMethodInfo is a helper class having state information about the http handler method to be invoked, the handler
- * and arguments required for invocation by the Dispatcher. RequestRouter populates this class and stores in its context
- * as attachment.
+ * and arguments required for invocation by the Dispatcher. RequestRouter populates this class and stores in its
+ * context as attachment.
  */
-public class HttpMethodInfo {
+class HttpMethodInfo {
 
   private final Method method;
   private final HttpHandler handler;
@@ -33,7 +34,7 @@ public class HttpMethodInfo {
   private final HttpResponder responder;
   private final boolean isStreaming;
 
-  public HttpMethodInfo(Method method, HttpHandler handler, Object[] args, HttpResponder responder) {
+  HttpMethodInfo(Method method, HttpHandler handler, Object[] args, HttpResponder responder) {
     this.method = method;
     this.handler = handler;
     this.args = args;
@@ -45,21 +46,22 @@ public class HttpMethodInfo {
    * Returns BodyConsumer interface of the http handler method.
    * @return
    */
-  public BodyConsumer invokeStreamingMethod() throws Exception {
-      return (BodyConsumer) method.invoke(handler, args);
+  BodyConsumer invokeStreamingMethod(HttpRequest request) throws Exception {
+    args[0] = request; //updates the request with the passed httprequest. 0 index is set to request @ ResourceModel
+    return (BodyConsumer) method.invoke(handler, args);
   }
 
   /**
    * Calls the httpHandler method
    */
-  public void invoke() throws Exception {
+  void invoke() throws Exception {
     method.invoke(handler, args);
   }
 
   /**
    * Sends the error to responder.
    */
-  public void sendError(HttpResponseStatus status, String message) {
+  void sendError(HttpResponseStatus status, String message) {
     responder.sendError(status, message);
   }
 
@@ -67,7 +69,7 @@ public class HttpMethodInfo {
    * Returns true if the handler method's return type is BodyConsumer
    * @return
    */
-  public boolean isStreaming() {
-   return isStreaming;
+  boolean isStreaming() {
+    return isStreaming;
   }
 }

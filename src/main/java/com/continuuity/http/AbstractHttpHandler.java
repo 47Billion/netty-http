@@ -43,7 +43,7 @@ public abstract class AbstractHttpHandler implements HttpHandler {
    */
   protected InternalHttpResponse sendInternalRequest(HttpRequest request) {
     InternalHttpResponder responder = new InternalHttpResponder();
-    httpResourceHandler.handle(request, responder, null);
+    httpResourceHandler.handle(request, responder);
     return responder.getResponse();
   }
 }

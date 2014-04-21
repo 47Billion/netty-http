@@ -110,15 +110,15 @@ public final class HttpResourceModel {
           Class<?>[] parameterTypes = method.getParameterTypes();
           for (Annotation[] annotations : method.getParameterAnnotations()) {
 
-             for (Annotation annotation : annotations) {
-               if (annotation.annotationType().isAssignableFrom(PathParam.class)) {
-                 PathParam param = (PathParam) annotation;
-                 String value = groupValues.get(param.value());
-                 Preconditions.checkArgument(value != null, "Could not resolve value for parameter %s", param.value());
-                 parameterIndex++;
-                 args[parameterIndex] = ConvertUtils.convert(value, parameterTypes[parameterIndex]);
-               }
-             }
+            for (Annotation annotation : annotations) {
+              if (annotation.annotationType().isAssignableFrom(PathParam.class)) {
+                PathParam param = (PathParam) annotation;
+                String value = groupValues.get(param.value());
+                Preconditions.checkArgument(value != null, "Could not resolve value for parameter %s", param.value());
+                parameterIndex++;
+                args[parameterIndex] = ConvertUtils.convert(value, parameterTypes[parameterIndex]);
+              }
+            }
           }
           Preconditions.checkArgument(method.getParameterTypes().length == parameterIndex + 1,
                                       "Could not resolve all parameters for method %s", method.getName());

@@ -102,7 +102,7 @@ public class HttpServerTest {
 
   @Test
   public void testSmallFileUpload() throws IOException {
-    testStreamUpload(1024);
+    testStreamUpload(10);
   }
 
   @Test
@@ -131,7 +131,7 @@ public class HttpServerTest {
   @Test
   public void testChunkAggregatedUpload() throws IOException {
     //create a random file to be uploaded.
-    int size = 1024;
+    int size = 1000;
     File fname = File.createTempFile("upload", ".jar");
     RandomAccessFile randf = new RandomAccessFile(fname, "rw");
     randf.setLength(size);

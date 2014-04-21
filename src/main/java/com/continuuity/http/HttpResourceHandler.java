@@ -131,7 +131,7 @@ public final class HttpResourceHandler implements HttpHandler {
    * @param request instance of {@code HttpRequest}
    * @param responder instance of {@code HttpResponder} to handle the request.
    */
-  public void handle(HttpRequest request, HttpResponder responder, Channel channel) {
+  public void handle(HttpRequest request, HttpResponder responder) {
 
     if (urlRewriter != null) {
       try {

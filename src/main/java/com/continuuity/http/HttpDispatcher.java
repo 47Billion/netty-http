@@ -16,12 +16,14 @@
 
 package com.continuuity.http;
 
+import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
+import org.jboss.netty.handler.codec.http.DefaultHttpRequest;
 import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMessage;
@@ -40,6 +42,7 @@ public class HttpDispatcher extends SimpleChannelUpstreamHandler {
   private static final Logger LOG = LoggerFactory.getLogger(HttpDispatcher.class);
 
   private BodyConsumer streamer;
+  private boolean noChunks;
   private boolean keepAlive;
 
   @Override
@@ -58,14 +61,22 @@ public class HttpDispatcher extends SimpleChannelUpstreamHandler {
         if (message instanceof HttpMessage) {
           HttpMessage httpMessage = (HttpMessage) message;
           this.keepAlive = HttpHeaders.isKeepAlive(httpMessage);
-          this.streamer = methodInfo.invokeStreamingMethod();
-          this.streamer.chunk(httpMessage.getContent(),
+          //check the httpmessage, if its not chunked, we need to send a new empty-content http request,
+          if (!httpMessage.isChunked()) {
+            this.noChunks = true;
+          }
+          ChannelBuffer content = httpMessage.getContent();
+          httpMessage.setChunked(true);
+          httpMessage.setContent(ChannelBuffers.EMPTY_BUFFER);
+          this.streamer = methodInfo.invokeStreamingMethod((HttpRequest) httpMessage);
+
+          this.streamer.chunk(content,
                               new BasicHttpResponder(channel, HttpHeaders.isKeepAlive(httpMessage)));
-          if (!httpMessage.isChunked() ||
-            (httpMessage.isChunked() && httpMessage.getContent() != ChannelBuffers.EMPTY_BUFFER)) {
+          if (noChunks) {
             // Message is not chunked, this is the only packet, we should call finish now and set streamer to null.
             this.streamer.finished(new BasicHttpResponder(channel, HttpHeaders.isKeepAlive(httpMessage)));
             this.streamer = null;
+            this.noChunks = false;
           }
         } else if (message instanceof HttpChunk) {
           HttpChunk httpChunk = (HttpChunk) message;
@@ -79,13 +90,14 @@ public class HttpDispatcher extends SimpleChannelUpstreamHandler {
             //last chunk, end of streaming.
             this.streamer.finished(new BasicHttpResponder(channel, this.keepAlive));
             this.streamer = null;
+            this.noChunks = false;
           } else {
             this.streamer.chunk(httpChunk.getContent(), new BasicHttpResponder(channel, this.keepAlive));
           }
         }
       } else {
         // http method without streaming. typical invocation.
-          methodInfo.invoke();
+        methodInfo.invoke();
       }
     } catch (Exception ex) {
       methodInfo.sendError(HttpResponseStatus.INTERNAL_SERVER_ERROR,
