@@ -95,7 +95,7 @@ public final class NettyHttpService extends AbstractIdleService {
                           Map<String, Object> channelConfigs,
                           RejectedExecutionHandler rejectedExecutionHandler, URLRewriter urlRewriter,
                           Iterable<? extends HttpHandler> httpHandlers,
-                          Iterable<? extends HandlerHook> handlerHooks){
+                          Iterable<? extends HandlerHook> handlerHooks) {
     this.bindAddress = bindAddress;
     this.bossThreadPoolSize = bossThreadPoolSize;
     this.workerThreadPoolSize = workerThreadPoolSize;
@@ -115,7 +115,7 @@ public final class NettyHttpService extends AbstractIdleService {
    * @param threadKeepAliveSecs  maximum time that excess idle threads will wait for new tasks before terminating.
    * @return instance of {@code ExecutionHandler}.
    */
-  private ExecutionHandler createExecutionHandler(int threadPoolSize, long threadKeepAliveSecs){
+  private ExecutionHandler createExecutionHandler(int threadPoolSize, long threadKeepAliveSecs) {
 
     ThreadFactory threadFactory = new ThreadFactory() {
       private final ThreadGroup threadGroup = new ThreadGroup("netty-executor-thread");
@@ -262,7 +262,7 @@ public final class NettyHttpService extends AbstractIdleService {
     private Map<String, Object> channelConfigs;
 
     //Private constructor to prevent instantiating Builder instance directly.
-    private Builder(){
+    private Builder() {
       bossThreadPoolSize = DEFAULT_BOSS_THREAD_POOL_SIZE;
       workerThreadPoolSize = DEFAULT_WORKER_THREAD_POOL_SIZE;
       execThreadPoolSize = DEFAULT_EXEC_HANDLER_THREAD_POOL_SIZE;
@@ -375,7 +375,7 @@ public final class NettyHttpService extends AbstractIdleService {
      * @param threadKeepAliveSecs  thread keep alive seconds.
      * @return an instance of {@code Builder}.
      */
-    public Builder setExecThreadKeepAliveSeconds(long threadKeepAliveSecs){
+    public Builder setExecThreadKeepAliveSeconds(long threadKeepAliveSecs) {
       this.execThreadKeepAliveSecs = threadKeepAliveSecs;
       return this;
     }

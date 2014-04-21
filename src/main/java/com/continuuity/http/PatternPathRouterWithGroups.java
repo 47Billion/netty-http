@@ -49,7 +49,7 @@ public final class PatternPathRouterWithGroups<T> {
   /**
    * Initialize PatternPathRouterWithGroups.
    */
-  public PatternPathRouterWithGroups(){
+  public PatternPathRouterWithGroups() {
     this.patternRouteList = Lists.newArrayList();
   }
 
@@ -72,7 +72,7 @@ public final class PatternPathRouterWithGroups<T> {
     StringBuilder sb =  new StringBuilder();
     List<String> groupNames = Lists.newArrayList();
 
-    for (String part : parts){
+    for (String part : parts) {
       Matcher groupMatcher = GROUP_PATTERN.matcher(part);
       if (groupMatcher.matches()) {
         groupNames.add(groupMatcher.group(1));
@@ -109,9 +109,9 @@ public final class PatternPathRouterWithGroups<T> {
     for (ImmutablePair<Pattern, RouteDestinationWithGroups<T>> patternRoute : patternRouteList) {
       ImmutableMap.Builder<String, String> groupNameValuesBuilder = ImmutableMap.builder();
       Matcher matcher =  patternRoute.getFirst().matcher(cleanPath);
-      if (matcher.matches()){
+      if (matcher.matches()) {
         int matchIndex = 1;
-        for (String name : patternRoute.getSecond().getGroupNames()){
+        for (String name : patternRoute.getSecond().getGroupNames()) {
           String value = matcher.group(matchIndex);
           groupNameValuesBuilder.put(name, value);
           matchIndex++;
@@ -133,7 +133,7 @@ public final class PatternPathRouterWithGroups<T> {
     private final T destination;
     private final List<String> groupNames;
 
-    public RouteDestinationWithGroups (T destination, List<String> groupNames){
+    public RouteDestinationWithGroups (T destination, List<String> groupNames) {
       this.destination = destination;
       this.groupNames = groupNames;
     }

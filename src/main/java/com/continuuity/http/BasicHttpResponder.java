@@ -76,7 +76,7 @@ public class BasicHttpResponder implements HttpResponder {
    * @param object Object that will be serialized into Json and sent back as content.
    */
   @Override
-  public void sendJson(HttpResponseStatus status, Object object){
+  public void sendJson(HttpResponseStatus status, Object object) {
     sendJson(status, object, object.getClass());
   }
 
@@ -87,7 +87,7 @@ public class BasicHttpResponder implements HttpResponder {
    * @param type Type of object.
    */
   @Override
-  public void sendJson(HttpResponseStatus status, Object object, Type type){
+  public void sendJson(HttpResponseStatus status, Object object, Type type) {
     sendJson(status, object, type, gson.get());
   }
 
@@ -122,7 +122,7 @@ public class BasicHttpResponder implements HttpResponder {
    * @param data string data to be sent back.
    */
   @Override
-  public void sendString(HttpResponseStatus status, String data){
+  public void sendString(HttpResponseStatus status, String data) {
     if (data == null) {
       sendStatus(status);
     }
@@ -179,7 +179,7 @@ public class BasicHttpResponder implements HttpResponder {
    * @param errorMessage Error message sent back to the client.
    */
   @Override
-  public void sendError(HttpResponseStatus status, String errorMessage){
+  public void sendError(HttpResponseStatus status, String errorMessage) {
     Preconditions.checkArgument(!status.equals(HttpResponseStatus.OK), "Response status cannot be OK for errors");
 
     ChannelBuffer errorContent = ChannelBuffers.wrappedBuffer(Charsets.UTF_8.encode(errorMessage));
@@ -239,7 +239,7 @@ public class BasicHttpResponder implements HttpResponder {
    */
   @Override
   public void sendContent(HttpResponseStatus status, ChannelBuffer content, String contentType,
-                          Multimap<String, String> headers){
+                          Multimap<String, String> headers) {
     HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, status);
 
     if (content != null) {

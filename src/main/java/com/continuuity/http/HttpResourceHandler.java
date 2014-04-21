@@ -28,19 +28,17 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.ws.rs.DELETE;
-import javax.ws.rs.GET;
-import javax.ws.rs.POST;
-import javax.ws.rs.PUT;
-import javax.ws.rs.Path;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.net.URI;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
-
-import static com.continuuity.http.PatternPathRouterWithGroups.RoutableDestination;
+import javax.ws.rs.DELETE;
+import javax.ws.rs.GET;
+import javax.ws.rs.POST;
+import javax.ws.rs.PUT;
+import javax.ws.rs.Path;
 
 /**
  * HttpResourceHandler handles the http request. HttpResourceHandler looks up all Jax-rs annotations in classes
@@ -70,13 +68,13 @@ public final class HttpResourceHandler implements HttpHandler {
     this.handlerHooks = ImmutableList.copyOf(handlerHooks);
     this.urlRewriter = urlRewriter;
 
-    for (HttpHandler handler : handlers){
+    for (HttpHandler handler : handlers) {
       String basePath = "";
-      if (handler.getClass().isAnnotationPresent(Path.class)){
+      if (handler.getClass().isAnnotationPresent(Path.class)) {
         basePath =  handler.getClass().getAnnotation(Path.class).value();
       }
 
-      for (Method method:  handler.getClass().getDeclaredMethods()){
+      for (Method method:  handler.getClass().getDeclaredMethods()) {
         if (method.getParameterTypes().length >= 2 &&
           method.getParameterTypes()[0].isAssignableFrom(HttpRequest.class) &&
           method.getParameterTypes()[1].isAssignableFrom(HttpResponder.class) &&
@@ -106,19 +104,19 @@ public final class HttpResourceHandler implements HttpHandler {
    * @param method Method handling the http request.
    * @return String representation of HttpMethod from annotations or emptyString as a default.
    */
-  private Set<HttpMethod> getHttpMethods(Method method){
+  private Set<HttpMethod> getHttpMethods(Method method) {
     Set<HttpMethod> httpMethods = Sets.newHashSet();
 
-    if (method.isAnnotationPresent(GET.class)){
+    if (method.isAnnotationPresent(GET.class)) {
       httpMethods.add(HttpMethod.GET);
     }
-    if (method.isAnnotationPresent(PUT.class)){
+    if (method.isAnnotationPresent(PUT.class)) {
       httpMethods.add(HttpMethod.PUT);
     }
-    if (method.isAnnotationPresent(POST.class)){
+    if (method.isAnnotationPresent(POST.class)) {
       httpMethods.add(HttpMethod.POST);
     }
-    if (method.isAnnotationPresent(DELETE.class)){
+    if (method.isAnnotationPresent(DELETE.class)) {
       httpMethods.add(HttpMethod.DELETE);
     }
 
@@ -152,9 +150,10 @@ public final class HttpResourceHandler implements HttpHandler {
     try {
       String path = URI.create(request.getUri()).normalize().getPath();
 
-      List<RoutableDestination<HttpResourceModel>> routableDestinations = patternRouter.getDestinations(path);
+      List<PatternPathRouterWithGroups.RoutableDestination<HttpResourceModel>> routableDestinations
+        = patternRouter.getDestinations(path);
 
-      RoutableDestination<HttpResourceModel> matchedDestination =
+      PatternPathRouterWithGroups.RoutableDestination<HttpResourceModel> matchedDestination =
         getMatchedDestination(routableDestinations, request.getMethod(), path);
 
       if (matchedDestination != null) {
@@ -187,7 +186,7 @@ public final class HttpResourceHandler implements HttpHandler {
         responder.sendError(HttpResponseStatus.NOT_FOUND, String.format("Problem accessing: %s. Reason: Not Found",
                                                                         request.getUri()));
       }
-    } catch (Throwable t){
+    } catch (Throwable t) {
       responder.sendError(HttpResponseStatus.INTERNAL_SERVER_ERROR,
                           String.format("Caught exception processing request. Reason: %s",
                                         t.getMessage()));
@@ -203,20 +202,20 @@ public final class HttpResourceHandler implements HttpHandler {
    * @param requestUri request URI.
    * @return RoutableDestination that matches httpMethod that needs to be handled. null if there are no matches.
    */
-  private RoutableDestination<HttpResourceModel>
-  getMatchedDestination(List<RoutableDestination<HttpResourceModel>> routableDestinations,
+  private PatternPathRouterWithGroups.RoutableDestination<HttpResourceModel>
+  getMatchedDestination(List<PatternPathRouterWithGroups.RoutableDestination<HttpResourceModel>> routableDestinations,
                         HttpMethod targetHttpMethod, String requestUri) {
 
     Iterable<String> requestUriParts = Splitter.on('/').omitEmptyStrings().split(requestUri);
-    List<RoutableDestination<HttpResourceModel>> matchedDestinations =
+    List<PatternPathRouterWithGroups.RoutableDestination<HttpResourceModel>> matchedDestinations =
       Lists.newArrayListWithExpectedSize(routableDestinations.size());
     int maxExactMatch = 0;
     int maxGroupMatch = 0;
     int maxPatternLength = 0;
 
-    for (RoutableDestination<HttpResourceModel> routableDestination : routableDestinations) {
-      HttpResourceModel resourceModel = routableDestination.getDestination();
-      int groupMatch = routableDestination.getGroupNameValues().size();
+    for (PatternPathRouterWithGroups.RoutableDestination<HttpResourceModel> destination : routableDestinations) {
+      HttpResourceModel resourceModel = destination.getDestination();
+      int groupMatch = destination.getGroupNameValues().size();
 
       for (HttpMethod httpMethod : resourceModel.getHttpMethod()) {
         if (targetHttpMethod.equals(httpMethod)) {
@@ -234,14 +233,14 @@ public final class HttpResourceHandler implements HttpHandler {
             maxPatternLength = resourceModel.getPath().length();
 
             matchedDestinations.clear();
-            matchedDestinations.add(routableDestination);
+            matchedDestinations.add(destination);
           } else if (exactMatch == maxExactMatch && groupMatch >= maxGroupMatch) {
             if (groupMatch > maxGroupMatch || resourceModel.getPath().length() > maxPatternLength) {
               maxGroupMatch = groupMatch;
               maxPatternLength = resourceModel.getPath().length();
               matchedDestinations.clear();
             }
-            matchedDestinations.add(routableDestination);
+            matchedDestinations.add(destination);
           }
         }
       }
@@ -272,14 +271,14 @@ public final class HttpResourceHandler implements HttpHandler {
 
   @Override
   public void init(HandlerContext context) {
-    for (HttpHandler handler : handlers){
+    for (HttpHandler handler : handlers) {
       handler.init(context);
     }
   }
 
   @Override
   public void destroy(HandlerContext context) {
-    for (HttpHandler handler : handlers){
+    for (HttpHandler handler : handlers) {
       handler.destroy(context);
     }
   }

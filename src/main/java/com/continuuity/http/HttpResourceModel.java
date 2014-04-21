@@ -25,11 +25,11 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.ws.rs.PathParam;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.Set;
+import javax.ws.rs.PathParam;
 
 /**
  * HttpResourceModel contains information needed to handle Http call for a given path. Used as a destination in
@@ -51,7 +51,7 @@ public final class HttpResourceModel {
    * @param method handler that handles the http request.
    * @param handler instance {@code HttpHandler}.
    */
-  public HttpResourceModel(Set<HttpMethod> httpMethods, String path, Method method, HttpHandler handler){
+  public HttpResourceModel(Set<HttpMethod> httpMethods, String path, Method method, HttpHandler handler) {
     this.httpMethods = httpMethods;
     this.path = path;
     this.method = method;
@@ -93,10 +93,10 @@ public final class HttpResourceModel {
    * @param responder HttpResponder to write the response.
    * @param groupValues Values needed for the invocation.
    */
-  public void handle(HttpRequest request, HttpResponder responder, Map<String, String> groupValues){
+  public void handle(HttpRequest request, HttpResponder responder, Map<String, String> groupValues) {
     //TODO: Refactor group values.
     try {
-      if (httpMethods.contains(request.getMethod())){
+      if (httpMethods.contains(request.getMethod())) {
         //Setup args for reflection call
         Object [] args = new Object[method.getParameterTypes().length];
         int parameterIndex = 0;
@@ -107,8 +107,8 @@ public final class HttpResourceModel {
         if (method.getParameterTypes().length > 2) {
           Class<?>[] parameterTypes = method.getParameterTypes();
           for (Annotation[] annotations : method.getParameterAnnotations()) {
-             for (Annotation annotation : annotations){
-               if (annotation.annotationType().isAssignableFrom(PathParam.class)){
+             for (Annotation annotation : annotations) {
+               if (annotation.annotationType().isAssignableFrom(PathParam.class)) {
                  PathParam param = (PathParam) annotation;
                  String value = groupValues.get(param.value());
                  Preconditions.checkArgument(value != null, "Could not resolve value for parameter %s", param.value());

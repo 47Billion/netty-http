@@ -53,12 +53,12 @@ public class InternalHttpResponder implements HttpResponder {
   }
 
   @Override
-  public void sendJson(HttpResponseStatus status, Object object){
+  public void sendJson(HttpResponseStatus status, Object object) {
     sendJson(status, object, object.getClass());
   }
 
   @Override
-  public void sendJson(HttpResponseStatus status, Object object, Type type){
+  public void sendJson(HttpResponseStatus status, Object object, Type type) {
     sendJson(status, object, type, gson);
   }
 
@@ -68,7 +68,7 @@ public class InternalHttpResponder implements HttpResponder {
   }
 
   @Override
-  public void sendString(HttpResponseStatus status, String data){
+  public void sendString(HttpResponseStatus status, String data) {
     if (data == null) {
       sendStatus(status);
     } else {
@@ -101,7 +101,7 @@ public class InternalHttpResponder implements HttpResponder {
   }
 
   @Override
-  public void sendError(HttpResponseStatus status, String errorMessage){
+  public void sendError(HttpResponseStatus status, String errorMessage) {
     Preconditions.checkArgument(!status.equals(HttpResponseStatus.OK), "Response status cannot be OK for errors");
 
     setResponseContent(status, errorMessage.getBytes(Charsets.UTF_8));
