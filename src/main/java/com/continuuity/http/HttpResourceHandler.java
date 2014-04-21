@@ -201,9 +201,9 @@ public final class HttpResourceHandler implements HttpHandler {
    *
    * @param request instance of {@code HttpRequest}
    * @param responder instance of {@code HttpResponder} to handle the request.
+   * @return HttpMethodInfo object, null if urlRewriter rewrite returns false, also when method cannot be invoked.
    */
   public HttpMethodInfo getDestinationMethod(HttpRequest request, HttpResponder responder) {
-
     if (urlRewriter != null) {
       try {
         request.setUri(URI.create(request.getUri()).normalize().toString());
@@ -220,7 +220,8 @@ public final class HttpResourceHandler implements HttpHandler {
     try {
       String path = URI.create(request.getUri()).normalize().getPath();
 
-      List<PatternPathRouterWithGroups.RoutableDestination<HttpResourceModel>> routableDestinations = patternRouter.getDestinations(path);
+      List<PatternPathRouterWithGroups.RoutableDestination<HttpResourceModel>> routableDestinations =
+        patternRouter.getDestinations(path);
 
       PatternPathRouterWithGroups.RoutableDestination<HttpResourceModel> matchedDestination =
         getMatchedDestination(routableDestinations, request.getMethod(), path);

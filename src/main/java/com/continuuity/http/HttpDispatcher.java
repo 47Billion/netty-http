@@ -16,6 +16,7 @@
 
 package com.continuuity.http;
 
+import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ExceptionEvent;
@@ -47,18 +48,21 @@ public class HttpDispatcher extends SimpleChannelUpstreamHandler {
     try {
       Object message = e.getMessage();
       Channel channel = ctx.getChannel();
+      if ((!(message instanceof HttpMessage) && !(message instanceof HttpChunk)) ||
+        (!methodInfo.isStreaming() && !(message instanceof HttpRequest))) {
+        super.messageReceived(ctx, e);
+      }
+
       if (methodInfo.isStreaming()) {
         //streaming
-        if (!(message instanceof HttpMessage) && !(message instanceof HttpChunk)) {
-          super.messageReceived(ctx, e);
-        }
         if (message instanceof HttpMessage) {
           HttpMessage httpMessage = (HttpMessage) message;
           this.keepAlive = HttpHeaders.isKeepAlive(httpMessage);
           this.streamer = methodInfo.invokeStreamingMethod();
           this.streamer.chunk(httpMessage.getContent(),
                               new BasicHttpResponder(channel, HttpHeaders.isKeepAlive(httpMessage)));
-          if (!httpMessage.isChunked()) {
+          if (!httpMessage.isChunked() ||
+            (httpMessage.isChunked() && httpMessage.getContent() != ChannelBuffers.EMPTY_BUFFER)) {
             // Message is not chunked, this is the only packet, we should call finish now and set streamer to null.
             this.streamer.finished(new BasicHttpResponder(channel, HttpHeaders.isKeepAlive(httpMessage)));
             this.streamer = null;
@@ -81,15 +85,11 @@ public class HttpDispatcher extends SimpleChannelUpstreamHandler {
         }
       } else {
         // http method without streaming. typical invocation.
-        if (message instanceof HttpRequest) {
           methodInfo.invoke();
-        } else {
-          super.messageReceived(ctx, e);
-        }
       }
     } catch (Exception ex) {
       methodInfo.sendError(HttpResponseStatus.INTERNAL_SERVER_ERROR,
-                           String.format("Error in executing path:"));
+                           String.format("Error in executing: ") + ex.getMessage());
     }
   }
 

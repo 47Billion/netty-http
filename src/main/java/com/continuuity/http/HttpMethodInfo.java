@@ -31,41 +31,29 @@ public class HttpMethodInfo {
   private final HttpHandler handler;
   private final Object[] args;
   private final HttpResponder responder;
+  private final boolean isStreaming;
 
   public HttpMethodInfo(Method method, HttpHandler handler, Object[] args, HttpResponder responder) {
     this.method = method;
     this.handler = handler;
     this.args = args;
     this.responder = responder;
+    this.isStreaming = BodyConsumer.class.isAssignableFrom(method.getReturnType());
   }
 
   /**
    * Returns BodyConsumer interface of the http handler method.
    * @return
    */
-  public BodyConsumer invokeStreamingMethod() {
-    BodyConsumer result = null;
-    try {
-      result = (BodyConsumer) method.invoke(handler, args);
-    } catch (IllegalAccessException e) {
-      responder.sendError(HttpResponseStatus.INTERNAL_SERVER_ERROR, String.format("Error in accessing path"));
-    } catch (InvocationTargetException e) {
-      responder.sendError(HttpResponseStatus.INTERNAL_SERVER_ERROR, String.format("Error in executing path"));
-    }
-    return result;
+  public BodyConsumer invokeStreamingMethod() throws Exception {
+      return (BodyConsumer) method.invoke(handler, args);
   }
 
   /**
    * Calls the httpHandler method
    */
-  public void invoke() {
-    try {
-      method.invoke(handler, args);
-    } catch (IllegalAccessException e) {
-      responder.sendError(HttpResponseStatus.INTERNAL_SERVER_ERROR, String.format("Error in accessing path"));
-    } catch (InvocationTargetException e) {
-      responder.sendError(HttpResponseStatus.INTERNAL_SERVER_ERROR, String.format("Error in executing path"));
-    }
+  public void invoke() throws Exception {
+    method.invoke(handler, args);
   }
 
   /**
@@ -80,18 +68,6 @@ public class HttpMethodInfo {
    * @return
    */
   public boolean isStreaming() {
-    if (BodyConsumer.class.isAssignableFrom(method.getReturnType())) {
-      return true;
-    }
-    return false;
+   return isStreaming;
   }
-
-  /**
-   * Returns the handler method  passed through reflection from HttpResourceModel,
-   * this can be used to invoke the method in Dispatcher.
-   */
-  public Method getMethod() {
-    return method;
-  }
-
 }
