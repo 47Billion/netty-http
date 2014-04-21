@@ -33,6 +33,7 @@ import org.apache.http.impl.client.DefaultConnectionKeepAliveStrategy;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.util.EntityUtils;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -43,8 +44,6 @@ import java.io.RandomAccessFile;
 import java.lang.reflect.Type;
 import java.util.List;
 import java.util.Map;
-
-import static org.junit.Assert.assertEquals;
 
 /**
  * Test the HttpServer.
@@ -67,7 +66,7 @@ public class HttpServerTest {
     service = builder.build();
     service.startAndWait();
     Service.State state = service.state();
-    assertEquals(Service.State.RUNNING, state);
+    Assert.assertEquals(Service.State.RUNNING, state);
     port = service.getBindAddress().getPort();
   }
 
@@ -81,23 +80,23 @@ public class HttpServerTest {
     String endPoint = String.format("http://localhost:%d/test/v1/resource?num=10", port);
     HttpGet get = new HttpGet(endPoint);
     HttpResponse response = request(get);
-    assertEquals(200, response.getStatusLine().getStatusCode());
+    Assert.assertEquals(200, response.getStatusLine().getStatusCode());
 
     String content = getResponseContent(response);
     Gson gson = new Gson();
     Map<String, String> map = gson.fromJson(content, STRING_MAP_TYPE);
-    assertEquals(1, map.size());
-    assertEquals("Handled get in resource end-point", map.get("status"));
+    Assert.assertEquals(1, map.size());
+    Assert.assertEquals("Handled get in resource end-point", map.get("status"));
 
     endPoint = String.format("http://localhost:%d/test/v1/tweets/1", port);
     get = new HttpGet(endPoint);
     response = request(get);
 
-    assertEquals(200, response.getStatusLine().getStatusCode());
+    Assert.assertEquals(200, response.getStatusLine().getStatusCode());
     content = getResponseContent(response);
     map = gson.fromJson(content, STRING_MAP_TYPE);
-    assertEquals(1, map.size());
-    assertEquals("Handled get in tweets end-point, id: 1", map.get("status"));
+    Assert.assertEquals(1, map.size());
+    Assert.assertEquals("Handled get in tweets end-point, id: 1", map.get("status"));
   }
 
 
@@ -125,8 +124,8 @@ public class HttpServerTest {
     HttpPut put = new HttpPut(endPoint);
     put.setEntity(new FileEntity(fname, ""));
     HttpResponse response = request(put);
-    assertEquals(200, response.getStatusLine().getStatusCode());
-    assertEquals(size, Integer.parseInt(EntityUtils.toString(response.getEntity()).split(":")[1].trim()));
+    Assert.assertEquals(200, response.getStatusLine().getStatusCode());
+    Assert.assertEquals(size, Integer.parseInt(EntityUtils.toString(response.getEntity()).split(":")[1].trim()));
   }
 
   @Test
@@ -144,8 +143,8 @@ public class HttpServerTest {
     HttpPut put = new HttpPut(endPoint);
     put.setEntity(new FileEntity(fname, ""));
     HttpResponse response = request(put);
-    assertEquals(200, response.getStatusLine().getStatusCode());
-    assertEquals(size, Integer.parseInt(EntityUtils.toString(response.getEntity()).split(":")[1].trim()));
+    Assert.assertEquals(200, response.getStatusLine().getStatusCode());
+    Assert.assertEquals(size, Integer.parseInt(EntityUtils.toString(response.getEntity()).split(":")[1].trim()));
   }
 
 
@@ -155,7 +154,7 @@ public class HttpServerTest {
     HttpPut put = new HttpPut(endPoint);
     put.setEntity(new StringEntity("data"));
     HttpResponse response = request(put);
-    assertEquals(200, response.getStatusLine().getStatusCode());
+    Assert.assertEquals(200, response.getStatusLine().getStatusCode());
   }
 
   @Test
@@ -164,7 +163,7 @@ public class HttpServerTest {
     HttpPut put = new HttpPut(endPoint);
     put.setEntity(new StringEntity("data"));
     HttpResponse response = request(put);
-    assertEquals(200, response.getStatusLine().getStatusCode());
+    Assert.assertEquals(200, response.getStatusLine().getStatusCode());
   }
 
   @Test
@@ -173,7 +172,7 @@ public class HttpServerTest {
     HttpPost post = new HttpPost(endPoint);
     post.setEntity(new StringEntity("data"));
     HttpResponse response = request(post);
-    assertEquals(404, response.getStatusLine().getStatusCode());
+    Assert.assertEquals(404, response.getStatusLine().getStatusCode());
   }
 
   @Test
@@ -182,12 +181,12 @@ public class HttpServerTest {
     HttpPut put = new HttpPut(endPoint);
     put.setEntity(new StringEntity("Hello, World"));
     HttpResponse response = request(put);
-    assertEquals(200, response.getStatusLine().getStatusCode());
+    Assert.assertEquals(200, response.getStatusLine().getStatusCode());
     String content = getResponseContent(response);
     Gson gson = new Gson();
     Map<String, String> map = gson.fromJson(content, STRING_MAP_TYPE);
-    assertEquals(1, map.size());
-    assertEquals("Handled put in tweets end-point, id: 1. Content: Hello, World", map.get("result"));
+    Assert.assertEquals(1, map.size());
+    Assert.assertEquals("Handled put in tweets end-point, id: 1. Content: Hello, World", map.get("result"));
   }
 
   @Test
@@ -196,12 +195,12 @@ public class HttpServerTest {
     HttpPost post = new HttpPost(endPoint);
     post.setEntity(new StringEntity("Hello, World"));
     HttpResponse response = request(post);
-    assertEquals(200, response.getStatusLine().getStatusCode());
+    Assert.assertEquals(200, response.getStatusLine().getStatusCode());
     String content = getResponseContent(response);
     Gson gson = new Gson();
     Map<String, String> map = gson.fromJson(content, STRING_MAP_TYPE);
-    assertEquals(1, map.size());
-    assertEquals("Handled post in tweets end-point, id: 1. Content: Hello, World", map.get("result"));
+    Assert.assertEquals(1, map.size());
+    Assert.assertEquals("Handled post in tweets end-point, id: 1. Content: Hello, World", map.get("result"));
   }
 
   @Test
@@ -209,7 +208,7 @@ public class HttpServerTest {
     String endPoint = String.format("http://localhost:%d/test/v1/facebook/1/message", port);
     HttpGet get = new HttpGet(endPoint);
     HttpResponse response = request(get);
-    assertEquals(405, response.getStatusLine().getStatusCode());
+    Assert.assertEquals(405, response.getStatusLine().getStatusCode());
   }
 
   @Test
@@ -218,8 +217,8 @@ public class HttpServerTest {
     HttpPut put = new HttpPut(endPoint);
     put.setEntity(new StringEntity("data"));
     HttpResponse response = request(put, true);
-    assertEquals(200, response.getStatusLine().getStatusCode());
-    assertEquals("keep-alive", response.getFirstHeader("Connection").getValue());
+    Assert.assertEquals(200, response.getStatusLine().getStatusCode());
+    Assert.assertEquals("keep-alive", response.getFirstHeader("Connection").getValue());
   }
 
   @Test
@@ -227,12 +226,12 @@ public class HttpServerTest {
     String endPoint = String.format("http://localhost:%d/test/v1/user/sree/message/12", port);
     HttpGet get = new HttpGet(endPoint);
     HttpResponse response = request(get);
-    assertEquals(200, response.getStatusLine().getStatusCode());
+    Assert.assertEquals(200, response.getStatusLine().getStatusCode());
     String content = getResponseContent(response);
     Gson gson = new Gson();
     Map<String, String> map = gson.fromJson(content, STRING_MAP_TYPE);
-    assertEquals(1, map.size());
-    assertEquals("Handled multiple path parameters sree 12", map.get("result"));
+    Assert.assertEquals(1, map.size());
+    Assert.assertEquals("Handled multiple path parameters sree 12", map.get("result"));
   }
 
 
@@ -242,12 +241,12 @@ public class HttpServerTest {
     String endPoint = String.format("http://localhost:%d/test/v1/message/21/user/sree", port);
     HttpGet get = new HttpGet(endPoint);
     HttpResponse response = request(get);
-    assertEquals(200, response.getStatusLine().getStatusCode());
+    Assert.assertEquals(200, response.getStatusLine().getStatusCode());
     String content = getResponseContent(response);
     Gson gson = new Gson();
     Map<String, String> map = gson.fromJson(content, STRING_MAP_TYPE);
-    assertEquals(1, map.size());
-    assertEquals("Handled multiple path parameters sree 21", map.get("result"));
+    Assert.assertEquals(1, map.size());
+    Assert.assertEquals("Handled multiple path parameters sree 21", map.get("result"));
   }
 
   @Test
@@ -255,7 +254,7 @@ public class HttpServerTest {
     String endPoint = String.format("http://localhost:%d/test/v1/NotRoutable/sree", port);
     HttpGet get = new HttpGet(endPoint);
     HttpResponse response = request(get);
-    assertEquals(500, response.getStatusLine().getStatusCode());
+    Assert.assertEquals(500, response.getStatusLine().getStatusCode());
   }
 
   @Test
@@ -263,7 +262,7 @@ public class HttpServerTest {
     String endPoint = String.format("http://localhost:%d/test/v1/NotRoutable/sree/message/12", port);
     HttpGet get = new HttpGet(endPoint);
     HttpResponse response = request(get);
-    assertEquals(500, response.getStatusLine().getStatusCode());
+    Assert.assertEquals(500, response.getStatusLine().getStatusCode());
   }
 
   @Test
@@ -271,8 +270,8 @@ public class HttpServerTest {
     String endPoint = String.format("http://localhost:%d/test/v1/multi-match/foo", port);
     HttpGet get = new HttpGet(endPoint);
     HttpResponse response = request(get);
-    assertEquals(200, response.getStatusLine().getStatusCode());
-    assertEquals("multi-match-get-actual-foo", getResponseContent(response));
+    Assert.assertEquals(200, response.getStatusLine().getStatusCode());
+    Assert.assertEquals("multi-match-get-actual-foo", getResponseContent(response));
   }
 
   @Test
@@ -280,8 +279,8 @@ public class HttpServerTest {
     String endPoint = String.format("http://localhost:%d/test/v1/multi-match/foo/baz/id", port);
     HttpGet get = new HttpGet(endPoint);
     HttpResponse response = request(get);
-    assertEquals(200, response.getStatusLine().getStatusCode());
-    assertEquals("multi-match-*", getResponseContent(response));
+    Assert.assertEquals(200, response.getStatusLine().getStatusCode());
+    Assert.assertEquals("multi-match-*", getResponseContent(response));
   }
 
   @Test
@@ -289,8 +288,8 @@ public class HttpServerTest {
     String endPoint = String.format("http://localhost:%d/test/v1/multi-match/bar", port);
     HttpGet get = new HttpGet(endPoint);
     HttpResponse response = request(get);
-    assertEquals(200, response.getStatusLine().getStatusCode());
-    assertEquals("multi-match-param-bar", getResponseContent(response));
+    Assert.assertEquals(200, response.getStatusLine().getStatusCode());
+    Assert.assertEquals("multi-match-param-bar", getResponseContent(response));
   }
 
   @Test
@@ -298,8 +297,8 @@ public class HttpServerTest {
     String endPoint = String.format("http://localhost:%d/test/v1/multi-match/id/bar", port);
     HttpGet get = new HttpGet(endPoint);
     HttpResponse response = request(get);
-    assertEquals(200, response.getStatusLine().getStatusCode());
-    assertEquals("multi-match-param-bar-id", getResponseContent(response));
+    Assert.assertEquals(200, response.getStatusLine().getStatusCode());
+    Assert.assertEquals("multi-match-param-bar-id", getResponseContent(response));
   }
 
   @Test
@@ -307,8 +306,8 @@ public class HttpServerTest {
     String endPoint = String.format("http://localhost:%d/test/v1/multi-match/foo", port);
     HttpPut put = new HttpPut(endPoint);
     HttpResponse response = request(put);
-    assertEquals(200, response.getStatusLine().getStatusCode());
-    assertEquals("multi-match-put-actual-foo", getResponseContent(response));
+    Assert.assertEquals(200, response.getStatusLine().getStatusCode());
+    Assert.assertEquals("multi-match-put-actual-foo", getResponseContent(response));
   }
 
   @Test
@@ -316,7 +315,7 @@ public class HttpServerTest {
     String endPoint = String.format("http://localhost:%d/test/v1/multi-match/bar", port);
     HttpPut put = new HttpPut(endPoint);
     HttpResponse response = request(put);
-    assertEquals(405, response.getStatusLine().getStatusCode());
+    Assert.assertEquals(405, response.getStatusLine().getStatusCode());
   }
 
   @Test
@@ -324,8 +323,8 @@ public class HttpServerTest {
     String endPoint = String.format("http://localhost:%d/test/v1/multi-match/foo/id/bar", port);
     HttpGet get = new HttpGet(endPoint);
     HttpResponse response = request(get);
-    assertEquals(200, response.getStatusLine().getStatusCode());
-    assertEquals("multi-match-foo-param-bar-id", getResponseContent(response));
+    Assert.assertEquals(200, response.getStatusLine().getStatusCode());
+    Assert.assertEquals("multi-match-foo-param-bar-id", getResponseContent(response));
   }
 
   @Test
@@ -333,8 +332,8 @@ public class HttpServerTest {
     String endPoint = String.format("http://localhost:%d/test/v1/multi-match/foo/bar/id", port);
     HttpGet get = new HttpGet(endPoint);
     HttpResponse response = request(get);
-    assertEquals(200, response.getStatusLine().getStatusCode());
-    assertEquals("multi-match-foo-bar-param-id", getResponseContent(response));
+    Assert.assertEquals(200, response.getStatusLine().getStatusCode());
+    Assert.assertEquals("multi-match-foo-bar-param-id", getResponseContent(response));
   }
 
   @Test
@@ -342,8 +341,8 @@ public class HttpServerTest {
     String endPoint = String.format("http://localhost:%d/test/v1/multi-match/foo/bar/bar/bar", port);
     HttpGet get = new HttpGet(endPoint);
     HttpResponse response = request(get);
-    assertEquals(200, response.getStatusLine().getStatusCode());
-    assertEquals("multi-match-foo-bar-param-bar-id-bar", getResponseContent(response));
+    Assert.assertEquals(200, response.getStatusLine().getStatusCode());
+    Assert.assertEquals("multi-match-foo-bar-param-bar-id-bar", getResponseContent(response));
   }
 
   private HttpResponse request(HttpUriRequest uri) throws IOException {

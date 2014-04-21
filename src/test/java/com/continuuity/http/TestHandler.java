@@ -22,6 +22,7 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferInputStream;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.junit.Assert;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -31,8 +32,6 @@ import javax.ws.rs.POST;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
-
-import static org.junit.Assert.assertTrue;
 
 /**
  * Test handler.
@@ -79,7 +78,7 @@ public class TestHandler implements HttpHandler {
       message = message.concat(String.format("Content: %s", data));
     } catch (IOException e) {
       //This condition should never occur
-      assertTrue(false);
+      Assert.fail();
     }
     JsonObject object = new JsonObject();
     object.addProperty("result", message);
@@ -95,7 +94,7 @@ public class TestHandler implements HttpHandler {
       message = message.concat(String.format("Content: %s", data));
     } catch (IOException e) {
       //This condition should never occur
-      assertTrue(false);
+      Assert.fail();
     }
     JsonObject object = new JsonObject();
     object.addProperty("result", message);

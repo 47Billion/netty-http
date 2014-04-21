@@ -37,8 +37,6 @@ import org.junit.Test;
 
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
-
 /**
  * Test URLRewriter.
  */
@@ -60,7 +58,7 @@ public class URLRewriterTest {
     service = builder.build();
     service.startAndWait();
     Service.State state = service.state();
-    assertEquals(Service.State.RUNNING, state);
+    Assert.assertEquals(Service.State.RUNNING, state);
     port = service.getBindAddress().getPort();
   }
 

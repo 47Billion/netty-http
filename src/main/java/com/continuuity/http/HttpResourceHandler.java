@@ -29,19 +29,17 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.ws.rs.DELETE;
-import javax.ws.rs.GET;
-import javax.ws.rs.POST;
-import javax.ws.rs.PUT;
-import javax.ws.rs.Path;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.net.URI;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
-
-import static com.continuuity.http.PatternPathRouterWithGroups.RoutableDestination;
+import javax.ws.rs.DELETE;
+import javax.ws.rs.GET;
+import javax.ws.rs.POST;
+import javax.ws.rs.PUT;
+import javax.ws.rs.Path;
 
 /**
  * HttpResourceHandler handles the http request. HttpResourceHandler looks up all Jax-rs annotations in classes
@@ -153,9 +151,10 @@ public final class HttpResourceHandler implements HttpHandler {
     try {
       String path = URI.create(request.getUri()).normalize().getPath();
 
-      List<RoutableDestination<HttpResourceModel>> routableDestinations = patternRouter.getDestinations(path);
+      List<PatternPathRouterWithGroups.RoutableDestination<HttpResourceModel>> routableDestinations
+        = patternRouter.getDestinations(path);
 
-      RoutableDestination<HttpResourceModel> matchedDestination =
+      PatternPathRouterWithGroups.RoutableDestination<HttpResourceModel> matchedDestination =
         getMatchedDestination(routableDestinations, request.getMethod(), path);
 
       if (matchedDestination != null) {
@@ -221,9 +220,9 @@ public final class HttpResourceHandler implements HttpHandler {
     try {
       String path = URI.create(request.getUri()).normalize().getPath();
 
-      List<RoutableDestination<HttpResourceModel>> routableDestinations = patternRouter.getDestinations(path);
+      List<PatternPathRouterWithGroups.RoutableDestination<HttpResourceModel>> routableDestinations = patternRouter.getDestinations(path);
 
-      RoutableDestination<HttpResourceModel> matchedDestination =
+      PatternPathRouterWithGroups.RoutableDestination<HttpResourceModel> matchedDestination =
         getMatchedDestination(routableDestinations, request.getMethod(), path);
 
       if (matchedDestination != null) {
@@ -272,20 +271,20 @@ public final class HttpResourceHandler implements HttpHandler {
    * @param requestUri request URI.
    * @return RoutableDestination that matches httpMethod that needs to be handled. null if there are no matches.
    */
-  private RoutableDestination<HttpResourceModel>
-  getMatchedDestination(List<RoutableDestination<HttpResourceModel>> routableDestinations,
+  private PatternPathRouterWithGroups.RoutableDestination<HttpResourceModel>
+  getMatchedDestination(List<PatternPathRouterWithGroups.RoutableDestination<HttpResourceModel>> routableDestinations,
                         HttpMethod targetHttpMethod, String requestUri) {
 
     Iterable<String> requestUriParts = Splitter.on('/').omitEmptyStrings().split(requestUri);
-    List<RoutableDestination<HttpResourceModel>> matchedDestinations =
+    List<PatternPathRouterWithGroups.RoutableDestination<HttpResourceModel>> matchedDestinations =
       Lists.newArrayListWithExpectedSize(routableDestinations.size());
     int maxExactMatch = 0;
     int maxGroupMatch = 0;
     int maxPatternLength = 0;
 
-    for (RoutableDestination<HttpResourceModel> routableDestination : routableDestinations) {
-      HttpResourceModel resourceModel = routableDestination.getDestination();
-      int groupMatch = routableDestination.getGroupNameValues().size();
+    for (PatternPathRouterWithGroups.RoutableDestination<HttpResourceModel> destination : routableDestinations) {
+      HttpResourceModel resourceModel = destination.getDestination();
+      int groupMatch = destination.getGroupNameValues().size();
 
       for (HttpMethod httpMethod : resourceModel.getHttpMethod()) {
         if (targetHttpMethod.equals(httpMethod)) {
@@ -303,14 +302,14 @@ public final class HttpResourceHandler implements HttpHandler {
             maxPatternLength = resourceModel.getPath().length();
 
             matchedDestinations.clear();
-            matchedDestinations.add(routableDestination);
+            matchedDestinations.add(destination);
           } else if (exactMatch == maxExactMatch && groupMatch >= maxGroupMatch) {
             if (groupMatch > maxGroupMatch || resourceModel.getPath().length() > maxPatternLength) {
               maxGroupMatch = groupMatch;
               maxPatternLength = resourceModel.getPath().length();
               matchedDestinations.clear();
             }
-            matchedDestinations.add(routableDestination);
+            matchedDestinations.add(destination);
           }
         }
       }

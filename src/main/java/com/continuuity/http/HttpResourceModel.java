@@ -25,11 +25,11 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.ws.rs.PathParam;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.Set;
+import javax.ws.rs.PathParam;
 
 /**
  * HttpResourceModel contains information needed to handle Http call for a given path. Used as a destination in
@@ -93,7 +93,9 @@ public final class HttpResourceModel {
    * @param responder HttpResponder to write the response.
    * @param groupValues Values needed for the invocation.
    */
+
   public HttpMethodInfo handle(HttpRequest request, HttpResponder responder, Map<String, String> groupValues) {
+
     //TODO: Refactor group values.
     try {
       if (httpMethods.contains(request.getMethod())) {
@@ -107,15 +109,16 @@ public final class HttpResourceModel {
         if (method.getParameterTypes().length > 2) {
           Class<?>[] parameterTypes = method.getParameterTypes();
           for (Annotation[] annotations : method.getParameterAnnotations()) {
-            for (Annotation annotation : annotations) {
-              if (annotation.annotationType().isAssignableFrom(PathParam.class)) {
-                PathParam param = (PathParam) annotation;
-                String value = groupValues.get(param.value());
-                Preconditions.checkArgument(value != null, "Could not resolve value for parameter %s", param.value());
-                parameterIndex++;
-                args[parameterIndex] = ConvertUtils.convert(value, parameterTypes[parameterIndex]);
-              }
-            }
+
+             for (Annotation annotation : annotations) {
+               if (annotation.annotationType().isAssignableFrom(PathParam.class)) {
+                 PathParam param = (PathParam) annotation;
+                 String value = groupValues.get(param.value());
+                 Preconditions.checkArgument(value != null, "Could not resolve value for parameter %s", param.value());
+                 parameterIndex++;
+                 args[parameterIndex] = ConvertUtils.convert(value, parameterTypes[parameterIndex]);
+               }
+             }
           }
           Preconditions.checkArgument(method.getParameterTypes().length == parameterIndex + 1,
                                       "Could not resolve all parameters for method %s", method.getName());

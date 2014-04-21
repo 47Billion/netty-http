@@ -22,13 +22,12 @@ import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-
-import static org.junit.Assert.assertEquals;
 
 /**
  *
@@ -43,10 +42,10 @@ public class InternalHttpResponderTest {
     responder.sendJson(HttpResponseStatus.OK, output);
 
     InternalHttpResponse response = responder.getResponse();
-    assertEquals(HttpResponseStatus.OK.getCode(), response.getStatusCode());
+    Assert.assertEquals(HttpResponseStatus.OK.getCode(), response.getStatusCode());
     JsonObject responseData = new Gson().fromJson(
       new InputStreamReader(response.getInputSupplier().getInput()), JsonObject.class);
-    assertEquals(output, responseData);
+    Assert.assertEquals(output, responseData);
   }
 
   @Test
@@ -106,14 +105,14 @@ public class InternalHttpResponderTest {
   private void validateResponse(InternalHttpResponse response, HttpResponseStatus expectedStatus, String expectedData)
     throws IOException {
     int code = response.getStatusCode();
-    assertEquals(expectedStatus.getCode(), code);
+    Assert.assertEquals(expectedStatus.getCode(), code);
     if (expectedData != null) {
       // read it twice to make sure the input supplier gives the full stream more than once.
       for (int i = 0; i < 2; i++) {
         BufferedReader reader = new BufferedReader(new InputStreamReader(response.getInputSupplier().getInput()));
         try {
           String data = reader.readLine();
-          assertEquals(expectedData, data);
+          Assert.assertEquals(expectedData, data);
         } finally {
           reader.close();
         }

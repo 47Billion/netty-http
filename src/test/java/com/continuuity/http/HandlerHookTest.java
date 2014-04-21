@@ -36,8 +36,6 @@ import org.slf4j.LoggerFactory;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.assertEquals;
-
 /**
  * Tests handler hooks.
  */
@@ -61,7 +59,7 @@ public class HandlerHookTest {
     service = builder.build();
     service.startAndWait();
     Service.State state = service.state();
-    assertEquals(Service.State.RUNNING, state);
+    Assert.assertEquals(Service.State.RUNNING, state);
     port = service.getBindAddress().getPort();
   }
 
