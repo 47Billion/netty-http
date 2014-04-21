@@ -32,7 +32,7 @@ import static org.junit.Assert.assertTrue;
 public class PathRouterTest {
 
   @Test
-  public void testPathRoutings(){
+  public void testPathRoutings() {
 
     PatternPathRouterWithGroups<String> pathRouter = PatternPathRouterWithGroups.create();
     pathRouter.add("/foo/{baz}/b", "foobarb");

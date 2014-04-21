@@ -51,7 +51,7 @@ public final class HttpResourceModel {
    * @param method handler that handles the http request.
    * @param handler instance {@code HttpHandler}.
    */
-  public HttpResourceModel(Set<HttpMethod> httpMethods, String path, Method method, HttpHandler handler){
+  public HttpResourceModel(Set<HttpMethod> httpMethods, String path, Method method, HttpHandler handler) {
     this.httpMethods = httpMethods;
     this.path = path;
     this.method = method;
@@ -96,7 +96,7 @@ public final class HttpResourceModel {
   public HttpMethodInfo handle(HttpRequest request, HttpResponder responder, Map<String, String> groupValues) {
     //TODO: Refactor group values.
     try {
-      if (httpMethods.contains(request.getMethod())){
+      if (httpMethods.contains(request.getMethod())) {
         //Setup args for reflection call
         Object [] args = new Object[method.getParameterTypes().length];
         int parameterIndex = 0;
@@ -107,8 +107,8 @@ public final class HttpResourceModel {
         if (method.getParameterTypes().length > 2) {
           Class<?>[] parameterTypes = method.getParameterTypes();
           for (Annotation[] annotations : method.getParameterAnnotations()) {
-            for (Annotation annotation : annotations){
-              if (annotation.annotationType().isAssignableFrom(PathParam.class)){
+            for (Annotation annotation : annotations) {
+              if (annotation.annotationType().isAssignableFrom(PathParam.class)) {
                 PathParam param = (PathParam) annotation;
                 String value = groupValues.get(param.value());
                 Preconditions.checkArgument(value != null, "Could not resolve value for parameter %s", param.value());
@@ -120,7 +120,7 @@ public final class HttpResourceModel {
           Preconditions.checkArgument(method.getParameterTypes().length == parameterIndex + 1,
                                       "Could not resolve all parameters for method %s", method.getName());
         }
-        return new HttpMethodInfo(method, handler, args, (WrappedHttpResponder) responder);
+        return new HttpMethodInfo(method, handler, args, responder);
       } else {
         //Found a matching resource but could not find the right HttpMethod so return 405
         responder.sendError(HttpResponseStatus.METHOD_NOT_ALLOWED, String.format

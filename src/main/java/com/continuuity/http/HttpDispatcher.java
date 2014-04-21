@@ -49,20 +49,23 @@ public class HttpDispatcher extends SimpleChannelUpstreamHandler {
       Channel channel = ctx.getChannel();
       if (methodInfo.isStreaming()) {
         //streaming
+        if (!(message instanceof HttpMessage) && !(message instanceof HttpChunk)) {
+          super.messageReceived(ctx, e);
+        }
         if (message instanceof HttpMessage) {
           HttpMessage httpMessage = (HttpMessage) message;
           this.keepAlive = HttpHeaders.isKeepAlive(httpMessage);
           this.streamer = methodInfo.invokeStreamingMethod();
           this.streamer.chunk(httpMessage.getContent(),
                               new BasicHttpResponder(channel, HttpHeaders.isKeepAlive(httpMessage)));
-          if (!httpMessage.isChunked()){
+          if (!httpMessage.isChunked()) {
             // Message is not chunked, this is the only packet, we should call finish now and set streamer to null.
             this.streamer.finished(new BasicHttpResponder(channel, HttpHeaders.isKeepAlive(httpMessage)));
             this.streamer = null;
           }
         } else if (message instanceof HttpChunk) {
           HttpChunk httpChunk = (HttpChunk) message;
-          if (this.streamer == null){
+          if (this.streamer == null) {
             // Received a chunk not belonging to a HttpMessage.
             throw new IllegalStateException(
               "received " + HttpChunk.class.getSimpleName() +
@@ -75,8 +78,6 @@ public class HttpDispatcher extends SimpleChannelUpstreamHandler {
           } else {
             this.streamer.chunk(httpChunk.getContent(), new BasicHttpResponder(channel, this.keepAlive));
           }
-        } else {
-          super.messageReceived(ctx, e);
         }
       } else {
         // http method without streaming. typical invocation.

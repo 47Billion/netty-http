@@ -30,9 +30,9 @@ public class HttpMethodInfo {
   private final Method method;
   private final HttpHandler handler;
   private final Object[] args;
-  private final WrappedHttpResponder responder;
+  private final HttpResponder responder;
 
-  HttpMethodInfo(Method method, HttpHandler handler, Object[] args, WrappedHttpResponder responder){
+  public HttpMethodInfo(Method method, HttpHandler handler, Object[] args, HttpResponder responder) {
     this.method = method;
     this.handler = handler;
     this.args = args;
@@ -43,7 +43,7 @@ public class HttpMethodInfo {
    * Returns BodyConsumer interface of the http handler method.
    * @return
    */
-  public BodyConsumer invokeStreamingMethod(){
+  public BodyConsumer invokeStreamingMethod() {
     BodyConsumer result = null;
     try {
       result = (BodyConsumer) method.invoke(handler, args);
@@ -58,7 +58,7 @@ public class HttpMethodInfo {
   /**
    * Calls the httpHandler method
    */
-  public void invoke(){
+  public void invoke() {
     try {
       method.invoke(handler, args);
     } catch (IllegalAccessException e) {
@@ -71,7 +71,7 @@ public class HttpMethodInfo {
   /**
    * Sends the error to responder.
    */
-  public void sendError(HttpResponseStatus status, String message){
+  public void sendError(HttpResponseStatus status, String message) {
     responder.sendError(status, message);
   }
 
@@ -79,8 +79,8 @@ public class HttpMethodInfo {
    * Returns true if the handler method's return type is BodyConsumer
    * @return
    */
-  public boolean isStreaming(){
-    if (BodyConsumer.class.isAssignableFrom(method.getReturnType())){
+  public boolean isStreaming() {
+    if (BodyConsumer.class.isAssignableFrom(method.getReturnType())) {
       return true;
     }
     return false;

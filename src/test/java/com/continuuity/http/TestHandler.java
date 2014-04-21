@@ -42,7 +42,7 @@ import static org.junit.Assert.assertTrue;
 public class TestHandler implements HttpHandler {
   @Path("resource")
   @GET
-  public void testGet(HttpRequest request, HttpResponder responder){
+  public void testGet(HttpRequest request, HttpResponder responder) {
     JsonObject object = new JsonObject();
     object.addProperty("status", "Handled get in resource end-point");
     responder.sendJson(HttpResponseStatus.OK, object);
@@ -50,7 +50,7 @@ public class TestHandler implements HttpHandler {
 
   @Path("tweets/{id}")
   @GET
-  public void testGetTweet(HttpRequest request, HttpResponder responder, @PathParam("id") String id){
+  public void testGetTweet(HttpRequest request, HttpResponder responder, @PathParam("id") String id) {
     JsonObject object = new JsonObject();
     object.addProperty("status", String.format("Handled get in tweets end-point, id: %s", id));
     responder.sendJson(HttpResponseStatus.OK, object);
@@ -58,7 +58,7 @@ public class TestHandler implements HttpHandler {
 
   @Path("tweets/{id}")
   @PUT
-  public void testPutTweet(HttpRequest request, HttpResponder responder, @PathParam("id") String id){
+  public void testPutTweet(HttpRequest request, HttpResponder responder, @PathParam("id") String id) {
     JsonObject object = new JsonObject();
     object.addProperty("status", String.format("Handled put in tweets end-point, id: %s", id));
     responder.sendJson(HttpResponseStatus.OK, object);
@@ -66,13 +66,13 @@ public class TestHandler implements HttpHandler {
 
   @Path("facebook/{id}/message")
   @DELETE
-  public void testNoMethodRoute(HttpRequest request, HttpResponder responder, @PathParam("id") String id){
+  public void testNoMethodRoute(HttpRequest request, HttpResponder responder, @PathParam("id") String id) {
 
   }
 
   @Path("facebook/{id}/message")
   @PUT
-  public void testPutMessage(HttpRequest request, HttpResponder responder, @PathParam("id") String id){
+  public void testPutMessage(HttpRequest request, HttpResponder responder, @PathParam("id") String id) {
     String message = String.format("Handled put in tweets end-point, id: %s. ", id);
     try {
       String data = getStringContent(request);
@@ -88,7 +88,7 @@ public class TestHandler implements HttpHandler {
 
   @Path("facebook/{id}/message")
   @POST
-  public void testPostMessage(HttpRequest request, HttpResponder responder, @PathParam("id") String id){
+  public void testPostMessage(HttpRequest request, HttpResponder responder, @PathParam("id") String id) {
     String message = String.format("Handled post in tweets end-point, id: %s. ", id);
     try {
       String data = getStringContent(request);
@@ -106,7 +106,7 @@ public class TestHandler implements HttpHandler {
   @GET
   public void testMultipleParametersInPath(HttpRequest request, HttpResponder responder,
                                            @PathParam("userId") String userId,
-                                           @PathParam("messageId") int messageId){
+                                           @PathParam("messageId") int messageId) {
     JsonObject object = new JsonObject();
     object.addProperty("result", String.format("Handled multiple path parameters %s %d", userId, messageId));
     responder.sendJson(HttpResponseStatus.OK, object);
@@ -116,7 +116,7 @@ public class TestHandler implements HttpHandler {
   @GET
   public void testMultipleParametersInDifferentParameterDeclarationOrder(HttpRequest request, HttpResponder responder,
                                            @PathParam("userId") String userId,
-                                           @PathParam("messageId") int messageId){
+                                           @PathParam("messageId") int messageId) {
     JsonObject object = new JsonObject();
     object.addProperty("result", String.format("Handled multiple path parameters %s %d", userId, messageId));
     responder.sendJson(HttpResponseStatus.OK, object);
@@ -125,7 +125,7 @@ public class TestHandler implements HttpHandler {
   @Path("/NotRoutable/{id}")
   @GET
   public void notRoutableParameterMismatch(HttpRequest request,
-                                           HttpResponder responder, @PathParam("userid") String userId){
+                                           HttpResponder responder, @PathParam("userid") String userId) {
     JsonObject object = new JsonObject();
     object.addProperty("result", String.format("Handled Not routable path %s ", userId));
     responder.sendJson(HttpResponseStatus.OK, object);
@@ -134,7 +134,7 @@ public class TestHandler implements HttpHandler {
   @Path("/NotRoutable/{userId}/message/{messageId}")
   @GET
   public void notRoutableMissingParameter(HttpRequest request, HttpResponder responder,
-                                          @PathParam("userId") String userId, String messageId){
+                                          @PathParam("userId") String userId, String messageId) {
     JsonObject object = new JsonObject();
     object.addProperty("result", String.format("Handled Not routable path %s ", userId));
     responder.sendJson(HttpResponseStatus.OK, object);
