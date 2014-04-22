@@ -22,6 +22,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import org.jboss.netty.channel.Channel;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
@@ -91,7 +92,7 @@ public final class HttpResourceHandler implements HttpHandler {
           patternRouter.add(absolutePath, new HttpResourceModel(httpMethods, absolutePath, method, handler));
         } else {
           LOG.trace("Not adding method {}({}) to path routing like. HTTP calls will not be routed to this method",
-                   method.getName(), method.getParameterTypes());
+                    method.getName(), method.getParameterTypes());
         }
       }
     }
@@ -192,6 +193,75 @@ public final class HttpResourceHandler implements HttpHandler {
                                         t.getMessage()));
       LOG.error("Exception thrown during request processing for uri {}", request.getUri(), t);
     }
+  }
+
+  /**
+   * Call the appropriate handler for handling the httprequest. 404 if path is not found. 405 if path is found but
+   * httpMethod does not match what's configured.
+   *
+   * @param request instance of {@code HttpRequest}
+   * @param responder instance of {@code HttpResponder} to handle the request.
+   * @return HttpMethodInfo object, null if urlRewriter rewrite returns false, also when method cannot be invoked.
+   */
+  public HttpMethodInfo getDestinationMethod(HttpRequest request, HttpResponder responder) {
+    if (urlRewriter != null) {
+      try {
+        request.setUri(URI.create(request.getUri()).normalize().toString());
+        if (!urlRewriter.rewrite(request, responder)) {
+          return null;
+        }
+      } catch (Throwable t) {
+        LOG.error("Exception thrown during rewriting of uri {}", request.getUri(), t);
+        responder.sendError(HttpResponseStatus.INTERNAL_SERVER_ERROR,
+                            String.format("Caught exception processing request. Reason: %s", t.getMessage()));
+      }
+    }
+
+    try {
+      String path = URI.create(request.getUri()).normalize().getPath();
+
+      List<PatternPathRouterWithGroups.RoutableDestination<HttpResourceModel>> routableDestinations =
+        patternRouter.getDestinations(path);
+
+      PatternPathRouterWithGroups.RoutableDestination<HttpResourceModel> matchedDestination =
+        getMatchedDestination(routableDestinations, request.getMethod(), path);
+
+      if (matchedDestination != null) {
+        HttpResourceModel httpResourceModel = matchedDestination.getDestination();
+
+        // Call preCall method of handler hooks.
+        boolean terminated = false;
+        HandlerInfo info = new HandlerInfo(httpResourceModel.getMethod().getDeclaringClass().getName(),
+                                           httpResourceModel.getMethod().getName());
+        for (HandlerHook hook : handlerHooks) {
+          if (!hook.preCall(request, responder, info)) {
+            // Terminate further request processing if preCall returns false.
+            terminated = true;
+            break;
+          }
+        }
+
+        // Call httpresource handle method, return the HttpMethodInfo Object.
+        if (!terminated) {
+          // Wrap responder to make post hook calls.
+          responder = new WrappedHttpResponder(responder, handlerHooks, request, info);
+          return httpResourceModel.handle(request, responder, matchedDestination.getGroupNameValues());
+        }
+      } else if (routableDestinations.size() > 0)  {
+        //Found a matching resource but could not find the right HttpMethod so return 405
+        responder.sendError(HttpResponseStatus.METHOD_NOT_ALLOWED,
+                            String.format("Problem accessing: %s. Reason: Method Not Allowed", request.getUri()));
+      } else {
+        responder.sendError(HttpResponseStatus.NOT_FOUND, String.format("Problem accessing: %s. Reason: Not Found",
+                                                                        request.getUri()));
+      }
+    } catch (Throwable t) {
+      responder.sendError(HttpResponseStatus.INTERNAL_SERVER_ERROR,
+                          String.format("Caught exception processing request. Reason: %s",
+                                        t.getMessage()));
+      LOG.error("Exception thrown during request processing for uri {}", request.getUri(), t);
+    }
+    return null;
   }
 
   /**

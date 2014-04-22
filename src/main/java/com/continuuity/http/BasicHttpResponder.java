@@ -288,8 +288,8 @@ public class BasicHttpResponder implements HttpResponder {
     channel.write(response);
 
     // Write the content.
-    ChannelFuture writeFuture;
 
+    ChannelFuture writeFuture;
     try {
       FileChannel fc = new RandomAccessFile(file, "r").getChannel();
 

@@ -33,7 +33,6 @@ import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.channel.group.ChannelGroup;
 import org.jboss.netty.channel.group.DefaultChannelGroup;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
-import org.jboss.netty.handler.codec.http.HttpChunkAggregator;
 import org.jboss.netty.handler.codec.http.HttpContentCompressor;
 import org.jboss.netty.handler.codec.http.HttpRequestDecoder;
 import org.jboss.netty.handler.codec.http.HttpResponseEncoder;
@@ -59,9 +58,8 @@ import java.util.concurrent.atomic.AtomicLong;
 public final class NettyHttpService extends AbstractIdleService {
 
   private static final Logger LOG  = LoggerFactory.getLogger(NettyHttpService.class);
-  private static final int MAX_INPUT_SIZE = 1024 * 1024 * 1024;
-  private static final int CLOSE_CHANNEL_TIMEOUT = 5;
 
+  private static final int CLOSE_CHANNEL_TIMEOUT = 5;
   private final int bossThreadPoolSize;
   private final int workerThreadPoolSize;
   private final int execThreadPoolSize;
@@ -161,9 +159,9 @@ public final class NettyHttpService extends AbstractIdleService {
 
     Executor workerExecutor = Executors.newFixedThreadPool(workerThreadPoolSize,
                                                            new ThreadFactoryBuilder()
-                                                            .setDaemon(true)
-                                                            .setNameFormat("netty-worker-thread")
-                                                            .build());
+                                                             .setDaemon(true)
+                                                             .setNameFormat("netty-worker-thread")
+                                                             .build());
 
     //Server bootstrap with default worker threads (2 * number of cores)
     bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(bossExecutor, bossThreadPoolSize,
@@ -186,14 +184,14 @@ public final class NettyHttpService extends AbstractIdleService {
         ChannelPipeline pipeline = Channels.pipeline();
 
         pipeline.addLast("tracker", connectionTracker);
-        pipeline.addLast("decoder", new HttpRequestDecoder());
-        pipeline.addLast("aggregator", new HttpChunkAggregator(MAX_INPUT_SIZE));
-        pipeline.addLast("encoder", new HttpResponseEncoder());
         pipeline.addLast("compressor", new HttpContentCompressor());
+        pipeline.addLast("encoder", new HttpResponseEncoder());
+        pipeline.addLast("decoder", new HttpRequestDecoder());
+        pipeline.addLast("router", new RequestRouter(resourceHandler));
         if (executionHandler != null) {
           pipeline.addLast("executor", executionHandler);
         }
-        pipeline.addLast("dispatcher", new HttpDispatcher(resourceHandler));
+        pipeline.addLast("dispatcher", new HttpDispatcher());
 
         return pipeline;
       }

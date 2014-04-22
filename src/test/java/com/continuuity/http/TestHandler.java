@@ -18,12 +18,14 @@ package com.continuuity.http;
 
 import com.google.gson.JsonObject;
 import org.apache.commons.io.IOUtils;
+import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferInputStream;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.junit.Assert;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -207,6 +209,35 @@ public class TestHandler implements HttpHandler {
   public void multiMatchFooBarParamId(HttpRequest request, HttpResponder responder,
                                       @PathParam("param") String param, @PathParam("id") String id) {
     responder.sendString(HttpResponseStatus.OK, "multi-match-foo-bar-param-" + param + "-id-" + id);
+  }
+
+  @Path("/stream/upload")
+  @PUT
+  public BodyConsumer streamUpload(HttpRequest request, HttpResponder responder) {
+    final int FILE_SIZE = 200 * 1024 * 1024;
+    return new BodyConsumer() {
+      ByteBuffer offHeapBuffer = ByteBuffer.allocateDirect(FILE_SIZE);
+
+      @Override
+      public void chunk(ChannelBuffer request, HttpResponder responder) {
+        offHeapBuffer.put(request.array());
+      }
+
+      @Override
+      public void finished(HttpResponder responder) {
+        int bytesUploaded = offHeapBuffer.position();
+        responder.sendString(HttpResponseStatus.OK, "Uploaded:" + bytesUploaded);
+        return;
+      }
+    };
+  }
+
+  @Path("/aggregate/upload")
+  @PUT
+  public void aggregatedUpload(HttpRequest request, HttpResponder response) {
+    ChannelBuffer content = request.getContent();
+    int bytesUploaded = content.readableBytes();
+    response.sendString(HttpResponseStatus.OK, "Uploaded:" + bytesUploaded);
   }
 
   @Override

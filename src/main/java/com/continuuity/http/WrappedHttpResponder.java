@@ -48,6 +48,7 @@ final class WrappedHttpResponder implements HttpResponder {
     this.handlerInfo = handlerInfo;
   }
 
+
   @Override
   public void sendJson(HttpResponseStatus status, Object object) {
     delegate.sendJson(status, object);

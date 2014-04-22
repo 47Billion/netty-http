@@ -21,21 +21,26 @@ import com.google.common.io.ByteStreams;
 import com.google.common.reflect.TypeToken;
 import com.google.common.util.concurrent.Service;
 import com.google.gson.Gson;
+import com.sun.tools.internal.ws.wsdl.document.http.HTTPUrlEncoded;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.methods.HttpUriRequest;
+import org.apache.http.entity.FileEntity;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.DefaultConnectionKeepAliveStrategy;
 import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.util.EntityUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.lang.reflect.Type;
 import java.util.List;
 import java.util.Map;
@@ -93,6 +98,55 @@ public class HttpServerTest {
     Assert.assertEquals(1, map.size());
     Assert.assertEquals("Handled get in tweets end-point, id: 1", map.get("status"));
   }
+
+
+  @Test
+  public void testSmallFileUpload() throws IOException {
+    testStreamUpload(10);
+  }
+
+  @Test
+  public void testLargeFileUpload() throws IOException {
+    testStreamUpload(100 * 1024 * 1024);
+  }
+
+
+  private void testStreamUpload(int size) throws IOException {
+    //create a random file to be uploaded.
+    File fname = File.createTempFile("upload", ".jar");
+    RandomAccessFile randf = new RandomAccessFile(fname, "rw");
+    randf.setLength(size);
+    fname.deleteOnExit();
+    randf.close();
+
+    //test stream upload
+    String endPoint = String.format("http://localhost:%d/test/v1/stream/upload", port);
+    HttpPut put = new HttpPut(endPoint);
+    put.setEntity(new FileEntity(fname, ""));
+    HttpResponse response = request(put);
+    Assert.assertEquals(200, response.getStatusLine().getStatusCode());
+    Assert.assertEquals(size, Integer.parseInt(EntityUtils.toString(response.getEntity()).split(":")[1].trim()));
+  }
+
+  @Test
+  public void testChunkAggregatedUpload() throws IOException {
+    //create a random file to be uploaded.
+    int size = 1000;
+    File fname = File.createTempFile("upload", ".jar");
+    RandomAccessFile randf = new RandomAccessFile(fname, "rw");
+    randf.setLength(size);
+    fname.deleteOnExit();
+    randf.close();
+
+    //test chunked upload
+    String endPoint = String.format("http://localhost:%d/test/v1/aggregate/upload", port);
+    HttpPut put = new HttpPut(endPoint);
+    put.setEntity(new FileEntity(fname, ""));
+    HttpResponse response = request(put);
+    Assert.assertEquals(200, response.getStatusLine().getStatusCode());
+    Assert.assertEquals(size, Integer.parseInt(EntityUtils.toString(response.getEntity()).split(":")[1].trim()));
+  }
+
 
   @Test
   public void testPathWithMultipleMethods() throws IOException {

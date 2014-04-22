@@ -16,44 +16,42 @@
 
 package com.continuuity.http;
 
-import com.google.common.base.Preconditions;
-import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
-import org.jboss.netty.handler.codec.http.HttpRequest;
+import org.jboss.netty.handler.codec.http.HttpChunk;
+import org.jboss.netty.handler.codec.http.HttpMessage;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * HttpDispatcher that routes HTTP requests to appropriate http handler methods. The mapping between uri paths to
- * methods that handle particular path is managed using jax-rs annotations. {@code HttpMethodHandler} routes to method
- * whose @Path annotation matches the http request uri.
+ * HttpDispatcher that invokes the appropriate http-handler method. The handler and the arguments are read
+ * from the {@code RequestRouter} context.
  */
+
 public class HttpDispatcher extends SimpleChannelUpstreamHandler {
 
   private static final Logger LOG = LoggerFactory.getLogger(HttpDispatcher.class);
-  private final HttpResourceHandler httpMethodHandler;
-
-  public HttpDispatcher(HttpResourceHandler methodHandler) {
-    this.httpMethodHandler = methodHandler;
-  }
 
   @Override
-  public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
-    Object message = e.getMessage();
-    if (!(message instanceof HttpRequest)) {
-      super.messageReceived(ctx, e);
-      return;
-    }
-    handleRequest((HttpRequest) message, ctx.getChannel());
-  }
+  public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {
+    HttpMethodInfo methodInfo  = (HttpMethodInfo) ctx.getPipeline().getContext("router").getAttachment();
+    try {
+      Object message = e.getMessage();
 
-  private void handleRequest(HttpRequest httpRequest, Channel channel) {
-    Preconditions.checkNotNull(httpMethodHandler, "Http Handler factory cannot be null");
-    httpMethodHandler.handle(httpRequest, new BasicHttpResponder(channel, HttpHeaders.isKeepAlive(httpRequest)));
+      if (message instanceof HttpMessage) {
+        methodInfo.invoke();
+      } else if (message instanceof HttpChunk) {
+        methodInfo.chunk((HttpChunk) message);
+      } else {
+        super.messageReceived(ctx, e);
+      }
+    } catch (Exception ex) {
+      methodInfo.sendError(HttpResponseStatus.INTERNAL_SERVER_ERROR,
+                           String.format("Error in executing: ") + ex.getMessage());
+    }
   }
 
   @Override
