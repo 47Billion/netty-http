@@ -16,9 +16,13 @@
 
 package com.continuuity.http;
 
+import com.google.common.base.Preconditions;
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBuffers;
+import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import java.lang.reflect.InvocationTargetException;
+
 import java.lang.reflect.Method;
 
 /**
@@ -30,32 +34,57 @@ class HttpMethodInfo {
 
   private final Method method;
   private final HttpHandler handler;
-  private final Object[] args;
+  private final boolean isChunkedRequest;
+  private final ChannelBuffer requestContent;
   private final HttpResponder responder;
+  private final Object[] args;
   private final boolean isStreaming;
+  private BodyConsumer bodyConsumer;
 
-  HttpMethodInfo(Method method, HttpHandler handler, Object[] args, HttpResponder responder) {
+  HttpMethodInfo(Method method, HttpHandler handler, HttpRequest request, HttpResponder responder, Object[] args) {
     this.method = method;
     this.handler = handler;
-    this.args = args;
+    this.isChunkedRequest = request.isChunked();
+    this.requestContent = request.getContent();
     this.responder = responder;
     this.isStreaming = BodyConsumer.class.isAssignableFrom(method.getReturnType());
+
+    // The actual arguments list to invoke handler method
+    this.args = new Object[args.length + 2];
+    this.args[0] = rewriteRequest(request, isStreaming);
+    this.args[1] = responder;
+    System.arraycopy(args, 0, this.args, 2, args.length);
   }
 
   /**
-   * Returns BodyConsumer interface of the http handler method.
-   * @return
-   */
-  BodyConsumer invokeStreamingMethod(HttpRequest request) throws Exception {
-    args[0] = request; //updates the request with the passed httprequest. 0 index is set to request @ ResourceModel
-    return (BodyConsumer) method.invoke(handler, args);
-  }
-
-  /**
-   * Calls the httpHandler method
+   * Calls the httpHandler method.
    */
   void invoke() throws Exception {
-    method.invoke(handler, args);
+    if (isStreaming) {
+      // Casting guarantee to be succeeded.
+      bodyConsumer = (BodyConsumer) method.invoke(handler, args);
+      if (requestContent.readable()) {
+        bodyConsumer.chunk(requestContent, responder);
+      }
+      if (!isChunkedRequest) {
+        bodyConsumer.finished(responder);
+        bodyConsumer = null;
+      }
+    } else {
+      // Actually <T> would be void
+      method.invoke(handler, args);
+      bodyConsumer = null;
+    }
+  }
+
+  void chunk(HttpChunk chunk) {
+    Preconditions.checkState(bodyConsumer != null, "Received chunked content without BodyConsumer.");
+    if (chunk.isLast()) {
+      bodyConsumer.finished(responder);
+      bodyConsumer = null;
+    } else {
+      bodyConsumer.chunk(chunk.getContent(), responder);
+    }
   }
 
   /**
@@ -71,5 +100,17 @@ class HttpMethodInfo {
    */
   boolean isStreaming() {
     return isStreaming;
+  }
+
+  private HttpRequest rewriteRequest(HttpRequest request, boolean isStreaming) {
+    if (!isStreaming) {
+      return request;
+    }
+
+    if (!request.isChunked() || request.getContent().readable()) {
+      request.setChunked(true);
+      request.setContent(ChannelBuffers.EMPTY_BUFFER);
+    }
+    return request;
   }
 }

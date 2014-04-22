@@ -100,30 +100,32 @@ public final class HttpResourceModel {
     try {
       if (httpMethods.contains(request.getMethod())) {
         //Setup args for reflection call
-        Object [] args = new Object[method.getParameterTypes().length];
-        int parameterIndex = 0;
-        args[parameterIndex] = request;
-        parameterIndex++;
-        args[parameterIndex] = responder;
+        Object [] args = new Object[method.getParameterTypes().length - 2];
 
         if (method.getParameterTypes().length > 2) {
+          int parameterIndex = 0;
           Class<?>[] parameterTypes = method.getParameterTypes();
-          for (Annotation[] annotations : method.getParameterAnnotations()) {
+          Annotation[][] parameterAnnotations = method.getParameterAnnotations();
+          for (int i = 2; i < parameterAnnotations.length; i++) {
+            Annotation[] annotations = parameterAnnotations[i];
 
+            boolean foundPathParam = false;
             for (Annotation annotation : annotations) {
               if (annotation.annotationType().isAssignableFrom(PathParam.class)) {
                 PathParam param = (PathParam) annotation;
                 String value = groupValues.get(param.value());
                 Preconditions.checkArgument(value != null, "Could not resolve value for parameter %s", param.value());
+                args[parameterIndex] = ConvertUtils.convert(value, parameterTypes[parameterIndex + 2]);
                 parameterIndex++;
-                args[parameterIndex] = ConvertUtils.convert(value, parameterTypes[parameterIndex]);
+                foundPathParam = true;
+                break;
               }
             }
+            Preconditions.checkArgument(foundPathParam, "Missing @PathParam annotation for parameter in method %s.",
+                                        method.getName());
           }
-          Preconditions.checkArgument(method.getParameterTypes().length == parameterIndex + 1,
-                                      "Could not resolve all parameters for method %s", method.getName());
         }
-        return new HttpMethodInfo(method, handler, args, responder);
+        return new HttpMethodInfo(method, handler, request, responder, args);
       } else {
         //Found a matching resource but could not find the right HttpMethod so return 405
         responder.sendError(HttpResponseStatus.METHOD_NOT_ALLOWED, String.format
