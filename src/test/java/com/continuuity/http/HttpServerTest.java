@@ -34,7 +34,9 @@ import org.apache.http.util.EntityUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -52,6 +54,9 @@ public class HttpServerTest {
   private static final Type STRING_MAP_TYPE = new TypeToken<Map<String, String>>() { }.getType();
   static int port;
   static NettyHttpService service;
+
+  @ClassRule
+  public static TemporaryFolder tmpFolder = new TemporaryFolder();
 
   @BeforeClass
   public static void setup() throws Exception {
@@ -112,10 +117,9 @@ public class HttpServerTest {
 
   private void testStreamUpload(int size) throws IOException {
     //create a random file to be uploaded.
-    File fname = File.createTempFile("upload", ".jar");
+    File fname = tmpFolder.newFile();
     RandomAccessFile randf = new RandomAccessFile(fname, "rw");
     randf.setLength(size);
-    fname.deleteOnExit();
     randf.close();
 
     //test stream upload
@@ -130,11 +134,10 @@ public class HttpServerTest {
   @Test
   public void testChunkAggregatedUpload() throws IOException {
     //create a random file to be uploaded.
-    int size = 1000;
-    File fname = File.createTempFile("upload", ".jar");
+    int size = 63 * 1024;
+    File fname = tmpFolder.newFile();
     RandomAccessFile randf = new RandomAccessFile(fname, "rw");
     randf.setLength(size);
-    fname.deleteOnExit();
     randf.close();
 
     //test chunked upload
@@ -146,6 +149,22 @@ public class HttpServerTest {
     Assert.assertEquals(size, Integer.parseInt(EntityUtils.toString(response.getEntity()).split(":")[1].trim()));
   }
 
+  @Test
+  public void testChunkAggregatedUploadFailure() throws IOException {
+    //create a random file to be uploaded.
+    int size = 67 * 1024;
+    File fname = tmpFolder.newFile();
+    RandomAccessFile randf = new RandomAccessFile(fname, "rw");
+    randf.setLength(size);
+    randf.close();
+
+    //test chunked upload
+    String endPoint = String.format("http://localhost:%d/test/v1/aggregate/upload", port);
+    HttpPut put = new HttpPut(endPoint);
+    put.setEntity(new FileEntity(fname, ""));
+    HttpResponse response = request(put);
+    Assert.assertEquals(500, response.getStatusLine().getStatusCode());
+  }
 
   @Test
   public void testPathWithMultipleMethods() throws IOException {

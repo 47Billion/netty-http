@@ -24,6 +24,7 @@ import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.handler.codec.http.HttpChunkAggregator;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpRequest;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -92,6 +93,8 @@ public class RequestRouter extends SimpleChannelUpstreamHandler {
   @Override
   public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
     LOG.error("Exception caught in channel processing.", e.getCause());
+    HttpMethodInfo info  = (HttpMethodInfo) ctx.getAttachment();
+    info.sendError(HttpResponseStatus.INTERNAL_SERVER_ERROR, e.getCause().getMessage());
     ctx.getChannel().close();
   }
 }
