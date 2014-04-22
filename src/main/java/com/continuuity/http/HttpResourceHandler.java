@@ -177,7 +177,11 @@ public final class HttpResourceHandler implements HttpHandler {
         if (!terminated) {
           // Wrap responder to make post hook calls.
           responder = new WrappedHttpResponder(responder, handlerHooks, request, info);
-          httpResourceModel.handle(request, responder, matchedDestination.getGroupNameValues());
+          if (httpResourceModel.handle(request, responder, matchedDestination.getGroupNameValues()).isStreaming()) {
+            responder.sendError(HttpResponseStatus.METHOD_NOT_ALLOWED,
+                                String.format("Body Consumer not supported for internalHttpResponder",
+                                              request.getUri()));
+          }
         }
       } else if (routableDestinations.size() > 0)  {
         //Found a matching resource but could not find the right HttpMethod so return 405
