@@ -72,6 +72,7 @@ public final class NettyHttpService extends AbstractIdleService {
 
   private ServerBootstrap bootstrap;
   private InetSocketAddress bindAddress;
+  private int httpChunkLimit;
 
 
   /**
@@ -93,7 +94,7 @@ public final class NettyHttpService extends AbstractIdleService {
                           Map<String, Object> channelConfigs,
                           RejectedExecutionHandler rejectedExecutionHandler, URLRewriter urlRewriter,
                           Iterable<? extends HttpHandler> httpHandlers,
-                          Iterable<? extends HandlerHook> handlerHooks) {
+                          Iterable<? extends HandlerHook> handlerHooks, int httpChunkLimit) {
     this.bindAddress = bindAddress;
     this.bossThreadPoolSize = bossThreadPoolSize;
     this.workerThreadPoolSize = workerThreadPoolSize;
@@ -104,6 +105,7 @@ public final class NettyHttpService extends AbstractIdleService {
     this.channelGroup = new DefaultChannelGroup();
     this.resourceHandler = new HttpResourceHandler(httpHandlers, handlerHooks, urlRewriter);
     this.handlerContext = new BasicHandlerContext(this.resourceHandler);
+    this.httpChunkLimit = httpChunkLimit;
   }
 
   /**
@@ -187,7 +189,7 @@ public final class NettyHttpService extends AbstractIdleService {
         pipeline.addLast("compressor", new HttpContentCompressor());
         pipeline.addLast("encoder", new HttpResponseEncoder());
         pipeline.addLast("decoder", new HttpRequestDecoder());
-        pipeline.addLast("router", new RequestRouter(resourceHandler));
+        pipeline.addLast("router", new RequestRouter(resourceHandler, httpChunkLimit));
         if (executionHandler != null) {
           pipeline.addLast("executor", executionHandler);
         }
@@ -246,6 +248,7 @@ public final class NettyHttpService extends AbstractIdleService {
     private static final long DEFAULT_EXEC_HANDLER_THREAD_KEEP_ALIVE_TIME_SECS = 60L;
     private static final RejectedExecutionHandler DEFAULT_REJECTED_EXECUTION_HANDLER =
       new ThreadPoolExecutor.CallerRunsPolicy();
+    private static final int DEFAULT_HTTP_CHUNK_LIMIT = 64 * 1024;
 
     private Iterable<? extends HttpHandler> handlers;
     private Iterable<? extends HandlerHook> handlerHooks = ImmutableList.of();
@@ -258,6 +261,7 @@ public final class NettyHttpService extends AbstractIdleService {
     private long execThreadKeepAliveSecs;
     private RejectedExecutionHandler rejectedExecutionHandler;
     private Map<String, Object> channelConfigs;
+    private int httpChunkLimit;
 
     //Private constructor to prevent instantiating Builder instance directly.
     private Builder() {
@@ -266,6 +270,7 @@ public final class NettyHttpService extends AbstractIdleService {
       execThreadPoolSize = DEFAULT_EXEC_HANDLER_THREAD_POOL_SIZE;
       execThreadKeepAliveSecs = DEFAULT_EXEC_HANDLER_THREAD_KEEP_ALIVE_TIME_SECS;
       rejectedExecutionHandler = DEFAULT_REJECTED_EXECUTION_HANDLER;
+      httpChunkLimit = DEFAULT_HTTP_CHUNK_LIMIT;
       port = 0;
       channelConfigs = Maps.newHashMap();
       channelConfigs.put("backlog", DEFAULT_CONNECTION_BACKLOG);
@@ -412,6 +417,11 @@ public final class NettyHttpService extends AbstractIdleService {
       return this;
     }
 
+    public Builder setHttpChunkLimit(int value) {
+      this.httpChunkLimit = value;
+      return this;
+    }
+
     /**
      * @return instance of {@code NettyHttpService}
      */
@@ -425,7 +435,7 @@ public final class NettyHttpService extends AbstractIdleService {
 
       return new NettyHttpService(bindAddress, bossThreadPoolSize, workerThreadPoolSize,
                                   execThreadPoolSize, execThreadKeepAliveSecs, channelConfigs, rejectedExecutionHandler,
-                                  urlRewriter, handlers, handlerHooks);
+                                  urlRewriter, handlers, handlerHooks, httpChunkLimit);
     }
   }
 }
