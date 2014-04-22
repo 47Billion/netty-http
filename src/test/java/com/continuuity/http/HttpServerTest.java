@@ -66,6 +66,7 @@ public class HttpServerTest {
 
     NettyHttpService.Builder builder = NettyHttpService.builder();
     builder.addHttpHandlers(handlers);
+    builder.setHttpChunkLimit(75 * 1024);
 
     service = builder.build();
     service.startAndWait();
@@ -134,7 +135,7 @@ public class HttpServerTest {
   @Test
   public void testChunkAggregatedUpload() throws IOException {
     //create a random file to be uploaded.
-    int size = 63 * 1024;
+    int size = 69 * 1024;
     File fname = tmpFolder.newFile();
     RandomAccessFile randf = new RandomAccessFile(fname, "rw");
     randf.setLength(size);
@@ -152,7 +153,7 @@ public class HttpServerTest {
   @Test
   public void testChunkAggregatedUploadFailure() throws IOException {
     //create a random file to be uploaded.
-    int size = 67 * 1024;
+    int size = 78 * 1024;
     File fname = tmpFolder.newFile();
     RandomAccessFile randf = new RandomAccessFile(fname, "rw");
     randf.setLength(size);

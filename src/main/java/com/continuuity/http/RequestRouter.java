@@ -37,12 +37,14 @@ import org.slf4j.LoggerFactory;
 public class RequestRouter extends SimpleChannelUpstreamHandler {
 
   private static final Logger LOG = LoggerFactory.getLogger(HttpDispatcher.class);
-  private static final int CHUNK_MEMORY_LIMIT = 64 * 1024;
+  private final int chunkMemoryLimit;
 
   private final HttpResourceHandler httpMethodHandler;
 
-  public RequestRouter(HttpResourceHandler methodHandler) {
+
+  public RequestRouter(HttpResourceHandler methodHandler, int chunkMemoryLimit) {
     this.httpMethodHandler = methodHandler;
+    this.chunkMemoryLimit = chunkMemoryLimit;
   }
 
   /**
@@ -84,7 +86,7 @@ public class RequestRouter extends SimpleChannelUpstreamHandler {
       }
     } else {
       if (channel.getPipeline().get("aggregator") == null) {
-        channel.getPipeline().addAfter("router", "aggregator", new HttpChunkAggregator(CHUNK_MEMORY_LIMIT));
+        channel.getPipeline().addAfter("router", "aggregator", new HttpChunkAggregator(chunkMemoryLimit));
       }
     }
     return true;
