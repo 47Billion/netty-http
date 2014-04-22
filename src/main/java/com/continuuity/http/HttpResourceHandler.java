@@ -215,7 +215,8 @@ public final class HttpResourceHandler implements HttpHandler {
         }
       } catch (Throwable t) {
         LOG.error("Exception thrown during rewriting of uri {}", request.getUri(), t);
-        responder.sendError(HttpResponseStatus.INTERNAL_SERVER_ERROR, String.format("Caught exception processing request. Reason: %s", t.getMessage()));
+        responder.sendError(HttpResponseStatus.INTERNAL_SERVER_ERROR, String.format
+          ("Caught exception processing request. Reason: %s", t.getMessage()));
       }
     }
 
