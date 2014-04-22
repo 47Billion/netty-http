@@ -1,7 +1,6 @@
 package com.continuuity.http;
 
 import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.handler.codec.http.HttpMessage;
 
 /**
  * HttpHandler would implement this interface to stream the body directly.

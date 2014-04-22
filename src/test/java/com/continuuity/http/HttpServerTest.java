@@ -21,7 +21,6 @@ import com.google.common.io.ByteStreams;
 import com.google.common.reflect.TypeToken;
 import com.google.common.util.concurrent.Service;
 import com.google.gson.Gson;
-import com.sun.tools.internal.ws.wsdl.document.http.HTTPUrlEncoded;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
