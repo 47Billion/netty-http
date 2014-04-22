@@ -130,7 +130,7 @@ public class HttpServerTest {
   @Test
   public void testChunkAggregatedUpload() throws IOException {
     //create a random file to be uploaded.
-    int size = 1000;
+    int size = 63 * 1024;
     File fname = File.createTempFile("upload", ".jar");
     RandomAccessFile randf = new RandomAccessFile(fname, "rw");
     randf.setLength(size);
@@ -146,6 +146,23 @@ public class HttpServerTest {
     Assert.assertEquals(size, Integer.parseInt(EntityUtils.toString(response.getEntity()).split(":")[1].trim()));
   }
 
+  @Test
+  public void testChunkAggregatedUploadFailure() throws IOException {
+    //create a random file to be uploaded.
+    int size = 65 * 1024;
+    File fname = File.createTempFile("upload", ".jar");
+    RandomAccessFile randf = new RandomAccessFile(fname, "rw");
+    randf.setLength(size);
+    fname.deleteOnExit();
+    randf.close();
+
+    //test chunked upload
+    String endPoint = String.format("http://localhost:%d/test/v1/aggregate/upload", port);
+    HttpPut put = new HttpPut(endPoint);
+    put.setEntity(new FileEntity(fname, ""));
+    HttpResponse response = request(put);
+    Assert.assertEquals(500, response.getStatusLine().getStatusCode());
+  }
 
   @Test
   public void testPathWithMultipleMethods() throws IOException {
