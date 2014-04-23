@@ -248,7 +248,7 @@ public final class NettyHttpService extends AbstractIdleService {
     private static final long DEFAULT_EXEC_HANDLER_THREAD_KEEP_ALIVE_TIME_SECS = 60L;
     private static final RejectedExecutionHandler DEFAULT_REJECTED_EXECUTION_HANDLER =
       new ThreadPoolExecutor.CallerRunsPolicy();
-    private static final int DEFAULT_HTTP_CHUNK_LIMIT = 64 * 1024;
+    private static final int DEFAULT_HTTP_CHUNK_LIMIT = 150 * 1024 * 1024;
 
     private Iterable<? extends HttpHandler> handlers;
     private Iterable<? extends HandlerHook> handlerHooks = ImmutableList.of();
