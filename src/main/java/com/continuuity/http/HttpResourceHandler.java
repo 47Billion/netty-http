@@ -254,8 +254,8 @@ public final class HttpResourceHandler implements HttpHandler {
         //Found a matching resource but could not find the right HttpMethod so return 405
         throw new HandlerException(HttpResponseStatus.METHOD_NOT_ALLOWED, request.getUri());
       } else {
-        throw new HandlerException(HttpResponseStatus.NOT_FOUND, String.format("Problem accessing: %s. Reason: Not Found",
-                                                                               request.getUri()));
+        throw new HandlerException(HttpResponseStatus.NOT_FOUND,
+                                   String.format("Problem accessing: %s. Reason: Not Found", request.getUri()));
       }
     } catch (Throwable t) {
       if (t instanceof HandlerException) {

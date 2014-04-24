@@ -1,6 +1,5 @@
 package com.continuuity.http;
 
-import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponse;
@@ -10,7 +9,7 @@ import org.jboss.netty.handler.codec.http.HttpVersion;
 import java.nio.charset.Charset;
 
 /**
- *
+ *Creating Http Response for Exception messages.
  */
 final class HandlerException extends Exception {
 
