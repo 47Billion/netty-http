@@ -58,8 +58,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class BasicHttpResponder implements HttpResponder {
   private final Channel channel;
   private final boolean keepalive;
-  private AtomicBoolean responded;
-  private AtomicBoolean chunkCloseOnFail;
+  private final AtomicBoolean responded;
 
   private final ThreadLocal<Gson> gson = new ThreadLocal<Gson>() {
     @Override
@@ -72,7 +71,6 @@ public class BasicHttpResponder implements HttpResponder {
     this.channel = channel;
     this.keepalive = keepalive;
     responded = new AtomicBoolean(false);
-    chunkCloseOnFail = new AtomicBoolean(false);
   }
 
   /**
@@ -200,6 +198,7 @@ public class BasicHttpResponder implements HttpResponder {
   @Override
   public void sendChunkStart(HttpResponseStatus status, Multimap<String, String> headers) {
     Preconditions.checkArgument(responded.compareAndSet(false, true), "Response has been already sent");
+    Preconditions.checkArgument((status.getCode() >= 200 && status.getCode() < 210) , "Http Chunk Failure");
     HttpResponse response = new DefaultHttpResponse(
       HttpVersion.HTTP_1_1, status != null ? status : HttpResponseStatus.OK);
 
@@ -212,9 +211,6 @@ public class BasicHttpResponder implements HttpResponder {
     response.setChunked(true);
     response.setHeader(HttpHeaders.Names.TRANSFER_ENCODING, HttpHeaders.Values.CHUNKED);
     channel.write(response);
-    if (status.getCode() >= 400) {
-      this.chunkCloseOnFail.compareAndSet(false, true);
-    }
 
   }
 
@@ -235,7 +231,7 @@ public class BasicHttpResponder implements HttpResponder {
   @Override
   public void sendChunkEnd() {
     ChannelFuture future = channel.write(new DefaultHttpChunkTrailer());
-    if (!keepalive || chunkCloseOnFail.get()) {
+    if (!keepalive) {
       future.addListener(ChannelFutureListener.CLOSE);
     }
   }
@@ -281,7 +277,7 @@ public class BasicHttpResponder implements HttpResponder {
   @Override
   public void sendFile(File file, Multimap<String, String> headers) {
     Preconditions.checkArgument(responded.compareAndSet(false, true), "Response has been already sent");
-    final HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+    HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
 
     response.setHeader(HttpHeaders.Names.CONTENT_LENGTH, file.length());
 

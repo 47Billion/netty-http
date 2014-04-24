@@ -1,12 +1,11 @@
 package com.continuuity.http;
 
+import com.google.common.base.Charsets;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
-
-import java.nio.charset.Charset;
 
 /**
  *Creating Http Response for Exception messages.
@@ -30,7 +29,7 @@ final class HandlerException extends Exception {
 
   HttpResponse createFailureResponse() {
     HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, failureStatus);
-    response.setContent(ChannelBuffers.copiedBuffer(message, Charset.defaultCharset()));
+    response.setContent(ChannelBuffers.copiedBuffer(message, Charsets.UTF_8));
     return response;
   }
 }

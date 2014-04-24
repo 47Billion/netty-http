@@ -108,7 +108,6 @@ public class RequestRouter extends SimpleChannelUpstreamHandler {
       Channels.write(ctx, future, ((HandlerException) cause).createFailureResponse());
     } else {
       HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR);
-      response.setContent(ChannelBuffers.EMPTY_BUFFER);
       Channels.write(ctx, future, response);
     }
 
