@@ -16,15 +16,22 @@
 
 package com.continuuity.http;
 
+import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
+import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpChunkAggregator;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpRequest;
+import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,10 +44,9 @@ import org.slf4j.LoggerFactory;
 public class RequestRouter extends SimpleChannelUpstreamHandler {
 
   private static final Logger LOG = LoggerFactory.getLogger(HttpDispatcher.class);
+
   private final int chunkMemoryLimit;
-
   private final HttpResourceHandler httpMethodHandler;
-
 
   public RequestRouter(HttpResourceHandler methodHandler, int chunkMemoryLimit) {
     this.httpMethodHandler = methodHandler;
@@ -71,7 +77,7 @@ public class RequestRouter extends SimpleChannelUpstreamHandler {
    * If return type of the handler http method is BodyConsumer, remove "HttpChunkAggregator" class if it exits
    * Else add the HttpChunkAggregator to the pipeline if its not present already.
    */
-  private boolean handleRequest(HttpRequest httpRequest, Channel channel, ChannelHandlerContext ctx) {
+  private boolean handleRequest(HttpRequest httpRequest, Channel channel, ChannelHandlerContext ctx) throws Exception {
 
     HttpMethodInfo methodInfo = httpMethodHandler.getDestinationMethod(
       httpRequest, new BasicHttpResponder(channel, HttpHeaders.isKeepAlive(httpRequest)));
@@ -93,10 +99,17 @@ public class RequestRouter extends SimpleChannelUpstreamHandler {
   }
 
   @Override
-  public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
+  public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)  {
     LOG.error("Exception caught in channel processing.", e.getCause());
-    HttpMethodInfo info  = (HttpMethodInfo) ctx.getAttachment();
-    info.sendError(HttpResponseStatus.INTERNAL_SERVER_ERROR, e.getCause().getMessage());
-    ctx.getChannel().close();
+    ChannelFuture future = Channels.future(ctx.getChannel());
+    future.addListener(ChannelFutureListener.CLOSE);
+    Throwable cause = e.getCause();
+    if (cause instanceof HandlerException) {
+      Channels.write(ctx, future, ((HandlerException) cause).createFailureResponse());
+    } else {
+      HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR);
+      Channels.write(ctx, future, response);
+    }
+
   }
 }

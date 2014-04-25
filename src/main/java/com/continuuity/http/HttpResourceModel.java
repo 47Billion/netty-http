@@ -94,7 +94,8 @@ public final class HttpResourceModel {
    * @param groupValues Values needed for the invocation.
    */
 
-  public HttpMethodInfo handle(HttpRequest request, HttpResponder responder, Map<String, String> groupValues) {
+  public HttpMethodInfo handle(HttpRequest request, HttpResponder responder, Map<String, String> groupValues)
+    throws Exception {
 
     //TODO: Refactor group values.
     try {
@@ -128,15 +129,13 @@ public final class HttpResourceModel {
         return new HttpMethodInfo(method, handler, request, responder, args);
       } else {
         //Found a matching resource but could not find the right HttpMethod so return 405
-        responder.sendError(HttpResponseStatus.METHOD_NOT_ALLOWED, String.format
+        throw new HandlerException(HttpResponseStatus.METHOD_NOT_ALLOWED, String.format
           ("Problem accessing: %s. Reason: Method Not Allowed", request.getUri()));
       }
     } catch (Throwable e) {
-      LOG.error("Error processing path {} {}", request.getUri(), e, e);
-      responder.sendError(HttpResponseStatus.INTERNAL_SERVER_ERROR,
-                          String.format("Error in executing path: %s", request.getUri()));
+      throw new HandlerException(HttpResponseStatus.INTERNAL_SERVER_ERROR,
+                                 String.format("Error in executing path:"));
     }
-    return null;
   }
 
   @Override

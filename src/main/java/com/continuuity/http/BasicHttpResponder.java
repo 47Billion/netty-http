@@ -49,6 +49,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.Collection;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * HttpResponder responds back to the client that initiated the request. Caller can use sendJson method to respond
@@ -57,6 +58,7 @@ import java.util.Map;
 public class BasicHttpResponder implements HttpResponder {
   private final Channel channel;
   private final boolean keepalive;
+  private final AtomicBoolean responded;
 
   private final ThreadLocal<Gson> gson = new ThreadLocal<Gson>() {
     @Override
@@ -68,6 +70,7 @@ public class BasicHttpResponder implements HttpResponder {
   public BasicHttpResponder(Channel channel, boolean keepalive) {
     this.channel = channel;
     this.keepalive = keepalive;
+    responded = new AtomicBoolean(false);
   }
 
   /**
@@ -194,6 +197,8 @@ public class BasicHttpResponder implements HttpResponder {
    */
   @Override
   public void sendChunkStart(HttpResponseStatus status, Multimap<String, String> headers) {
+    Preconditions.checkArgument(responded.compareAndSet(false, true), "Response has been already sent");
+    Preconditions.checkArgument((status.getCode() >= 200 && status.getCode() < 210) , "Http Chunk Failure");
     HttpResponse response = new DefaultHttpResponse(
       HttpVersion.HTTP_1_1, status != null ? status : HttpResponseStatus.OK);
 
@@ -206,6 +211,7 @@ public class BasicHttpResponder implements HttpResponder {
     response.setChunked(true);
     response.setHeader(HttpHeaders.Names.TRANSFER_ENCODING, HttpHeaders.Values.CHUNKED);
     channel.write(response);
+
   }
 
   /**
@@ -240,6 +246,7 @@ public class BasicHttpResponder implements HttpResponder {
   @Override
   public void sendContent(HttpResponseStatus status, ChannelBuffer content, String contentType,
                           Multimap<String, String> headers) {
+    Preconditions.checkArgument(responded.compareAndSet(false, true), "Response has been already sent");
     HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, status);
 
     if (content != null) {
@@ -262,13 +269,14 @@ public class BasicHttpResponder implements HttpResponder {
     }
 
     ChannelFuture future = channel.write(response);
-    if (!keepalive) {
+    if (!keepalive || status.getCode() >= 400) {
       future.addListener(ChannelFutureListener.CLOSE);
     }
   }
 
   @Override
   public void sendFile(File file, Multimap<String, String> headers) {
+    Preconditions.checkArgument(responded.compareAndSet(false, true), "Response has been already sent");
     HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
 
     response.setHeader(HttpHeaders.Names.CONTENT_LENGTH, file.length());

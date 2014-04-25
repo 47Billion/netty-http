@@ -206,7 +206,7 @@ public final class HttpResourceHandler implements HttpHandler {
    * @param responder instance of {@code HttpResponder} to handle the request.
    * @return HttpMethodInfo object, null if urlRewriter rewrite returns false, also when method cannot be invoked.
    */
-  public HttpMethodInfo getDestinationMethod(HttpRequest request, HttpResponder responder) {
+  public HttpMethodInfo getDestinationMethod(HttpRequest request, HttpResponder responder) throws Exception {
     if (urlRewriter != null) {
       try {
         request.setUri(URI.create(request.getUri()).normalize().toString());
@@ -215,8 +215,8 @@ public final class HttpResourceHandler implements HttpHandler {
         }
       } catch (Throwable t) {
         LOG.error("Exception thrown during rewriting of uri {}", request.getUri(), t);
-        responder.sendError(HttpResponseStatus.INTERNAL_SERVER_ERROR, String.format
-          ("Caught exception processing request. Reason: %s", t.getMessage()));
+        throw new HandlerException(HttpResponseStatus.INTERNAL_SERVER_ERROR,
+                                   String.format("Caught exception processing request. Reason: %s", t.getMessage()));
       }
     }
 
@@ -252,17 +252,17 @@ public final class HttpResourceHandler implements HttpHandler {
         }
       } else if (routableDestinations.size() > 0)  {
         //Found a matching resource but could not find the right HttpMethod so return 405
-        responder.sendError(HttpResponseStatus.METHOD_NOT_ALLOWED,
-                            String.format("Problem accessing: %s. Reason: Method Not Allowed", request.getUri()));
+        throw new HandlerException(HttpResponseStatus.METHOD_NOT_ALLOWED, request.getUri());
       } else {
-        responder.sendError(HttpResponseStatus.NOT_FOUND, String.format("Problem accessing: %s. Reason: Not Found",
-                                                                        request.getUri()));
+        throw new HandlerException(HttpResponseStatus.NOT_FOUND,
+                                   String.format("Problem accessing: %s. Reason: Not Found", request.getUri()));
       }
     } catch (Throwable t) {
-      responder.sendError(HttpResponseStatus.INTERNAL_SERVER_ERROR,
-                          String.format("Caught exception processing request. Reason: %s",
-                                        t.getMessage()));
-      LOG.error("Exception thrown during request processing for uri {}", request.getUri(), t);
+      if (t instanceof HandlerException) {
+        throw (HandlerException) t;
+      }
+      throw new HandlerException(HttpResponseStatus.INTERNAL_SERVER_ERROR,
+                                 String.format("Caught exception processing request. Reason: %s", t.getMessage()), t);
     }
     return null;
   }
