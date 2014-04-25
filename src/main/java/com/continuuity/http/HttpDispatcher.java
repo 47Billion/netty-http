@@ -49,8 +49,7 @@ public class HttpDispatcher extends SimpleChannelUpstreamHandler {
         super.messageReceived(ctx, e);
       }
     } catch (Exception ex) {
-      methodInfo.sendError(HttpResponseStatus.INTERNAL_SERVER_ERROR,
-                           String.format("Error in executing: ") + ex.getMessage());
+      methodInfo.sendError(HttpResponseStatus.INTERNAL_SERVER_ERROR, ex);
     }
   }
 

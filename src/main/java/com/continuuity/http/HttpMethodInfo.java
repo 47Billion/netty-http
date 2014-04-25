@@ -90,8 +90,12 @@ class HttpMethodInfo {
   /**
    * Sends the error to responder.
    */
-  void sendError(HttpResponseStatus status, String message) {
-    responder.sendError(status, message);
+  void sendError(HttpResponseStatus status, Throwable ex) {
+    if (bodyConsumer != null) {
+      bodyConsumer.handleError(ex);
+      bodyConsumer = null;
+    }
+    responder.sendError(status, String.format("Error in executing: ") + ex.getMessage());
   }
 
   /**
