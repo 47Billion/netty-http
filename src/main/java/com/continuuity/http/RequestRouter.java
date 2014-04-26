@@ -16,6 +16,7 @@
 
 package com.continuuity.http;
 
+import com.google.common.base.Preconditions;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
@@ -47,6 +48,7 @@ public class RequestRouter extends SimpleChannelUpstreamHandler {
 
   private final int chunkMemoryLimit;
   private final HttpResourceHandler httpMethodHandler;
+  private  HttpMethodInfo methodInfo;
 
   public RequestRouter(HttpResourceHandler methodHandler, int chunkMemoryLimit) {
     this.httpMethodHandler = methodHandler;
@@ -79,7 +81,7 @@ public class RequestRouter extends SimpleChannelUpstreamHandler {
    */
   private boolean handleRequest(HttpRequest httpRequest, Channel channel, ChannelHandlerContext ctx) throws Exception {
 
-    HttpMethodInfo methodInfo = httpMethodHandler.getDestinationMethod(
+     methodInfo = httpMethodHandler.getDestinationMethod(
       httpRequest, new BasicHttpResponder(channel, HttpHeaders.isKeepAlive(httpRequest)));
 
     if (methodInfo == null) {
@@ -101,6 +103,11 @@ public class RequestRouter extends SimpleChannelUpstreamHandler {
   @Override
   public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)  {
     LOG.error("Exception caught in channel processing.", e.getCause());
+
+    if (methodInfo != null) {
+        methodInfo.sendError(HttpResponseStatus.INTERNAL_SERVER_ERROR, e.getCause());
+        return;
+    }
     ChannelFuture future = Channels.future(ctx.getChannel());
     future.addListener(ChannelFutureListener.CLOSE);
     Throwable cause = e.getCause();
@@ -110,6 +117,5 @@ public class RequestRouter extends SimpleChannelUpstreamHandler {
       HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR);
       Channels.write(ctx, future, response);
     }
-
   }
 }

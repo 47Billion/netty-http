@@ -230,7 +230,7 @@ public class TestHandler implements HttpHandler {
         return;
       }
       @Override
-      public void handleError(Throwable cause){
+      public void handleError(Throwable cause) {
         offHeapBuffer = null;
       }
     };

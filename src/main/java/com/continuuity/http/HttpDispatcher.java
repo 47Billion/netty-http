@@ -36,26 +36,15 @@ public class HttpDispatcher extends SimpleChannelUpstreamHandler {
   private static final Logger LOG = LoggerFactory.getLogger(HttpDispatcher.class);
 
   @Override
-  public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {
+  public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
     HttpMethodInfo methodInfo  = (HttpMethodInfo) ctx.getPipeline().getContext("router").getAttachment();
-    try {
-      Object message = e.getMessage();
-
-      if (message instanceof HttpMessage) {
-        methodInfo.invoke();
-      } else if (message instanceof HttpChunk) {
-        methodInfo.chunk((HttpChunk) message);
-      } else {
-        super.messageReceived(ctx, e);
-      }
-    } catch (Exception ex) {
-      methodInfo.sendError(HttpResponseStatus.INTERNAL_SERVER_ERROR, ex);
+    Object message = e.getMessage();
+    if (message instanceof HttpMessage) {
+      methodInfo.invoke();
+    } else if (message instanceof HttpChunk) {
+      methodInfo.chunk((HttpChunk) message);
+    } else {
+      super.messageReceived(ctx, e);
     }
-  }
-
-  @Override
-  public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
-    LOG.error("Exception caught in channel processing.", e.getCause());
-    ctx.getChannel().close();
   }
 }

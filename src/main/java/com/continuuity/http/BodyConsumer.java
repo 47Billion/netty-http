@@ -13,18 +13,18 @@ public abstract class BodyConsumer {
    * @param request
    * @param responder
    */
-  abstract void chunk(ChannelBuffer request, HttpResponder responder);
+  public abstract void chunk(ChannelBuffer request, HttpResponder responder);
 
   /**
    * This is called on the receipt of the last HttpChunk.
    * @param responder
    */
-  abstract void finished(HttpResponder responder);
+  public abstract void finished(HttpResponder responder);
 
   /**
    * When there is exception on netty while streaming, it will be propagated to handler
    * so the handler can do the cleanup.
    * @param cause
    */
-  abstract void handleError(Throwable cause);
+  public abstract void handleError(Throwable cause);
 }
