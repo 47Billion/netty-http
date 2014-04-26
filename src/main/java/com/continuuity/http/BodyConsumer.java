@@ -3,7 +3,7 @@ package com.continuuity.http;
 import org.jboss.netty.buffer.ChannelBuffer;
 
 /**
- * HttpHandler method would extend this abstract class to stream the body directly.
+ * HttpHandler would extend this abstract class and implement methods to stream the body directly.
  * chunk method would receive the http-chunks of the body and finished would be called
  * on receipt of the last chunk.
  */
@@ -23,7 +23,7 @@ public abstract class BodyConsumer {
 
   /**
    * When there is exception on netty while streaming, it will be propagated to handler
-   * so the handler can release resources.
+   * so the handler can do the cleanup.
    * @param cause
    */
   abstract void handleError(Throwable cause);
