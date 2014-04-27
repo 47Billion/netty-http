@@ -49,9 +49,9 @@ public class HttpDispatcher extends SimpleChannelUpstreamHandler {
     }
   }
 
-  @Override
+ /* @Override
   public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
     LOG.error("Exception caught in channel processing.", e.getCause());
     ctx.getChannel().close();
-  }
+  }*/
 }

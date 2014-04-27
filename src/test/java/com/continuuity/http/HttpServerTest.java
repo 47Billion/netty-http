@@ -30,6 +30,7 @@ import org.apache.http.entity.FileEntity;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.DefaultConnectionKeepAliveStrategy;
 import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.impl.client.DefaultHttpRequestRetryHandler;
 import org.apache.http.util.EntityUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -390,7 +391,7 @@ public class HttpServerTest {
   private HttpResponse request(HttpUriRequest uri, boolean keepalive) throws IOException {
     DefaultHttpClient client = new DefaultHttpClient();
    // This will set retry on error to be disabled. default is retry 3 times
-   // client.setHttpRequestRetryHandler(new DefaultHttpRequestRetryHandler(0, false));
+   client.setHttpRequestRetryHandler(new DefaultHttpRequestRetryHandler(0, false));
     if (keepalive) {
       client.setKeepAliveStrategy(new DefaultConnectionKeepAliveStrategy());
     }

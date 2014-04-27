@@ -99,7 +99,7 @@ public class HandlerHookTest {
     Assert.assertEquals(0, handlerHook2.getNumPostCalls());
   }
 
-  @Ignore //TODO: This should be fixed.
+   //TODO: This should be fixed.
   @Test
   public void testHandlerException() throws Exception {
     HttpResponse response = doGet("/test/v1/exception");
