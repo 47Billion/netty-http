@@ -16,6 +16,7 @@
 
 package com.continuuity.http;
 
+import com.google.common.base.Preconditions;
 import com.google.gson.JsonObject;
 import org.apache.commons.io.IOUtils;
 import org.jboss.netty.buffer.ChannelBuffer;
@@ -114,8 +115,8 @@ public class TestHandler implements HttpHandler {
   @Path("/message/{messageId}/user/{userId}")
   @GET
   public void testMultipleParametersInDifferentParameterDeclarationOrder(HttpRequest request, HttpResponder responder,
-                                           @PathParam("userId") String userId,
-                                           @PathParam("messageId") int messageId) {
+                                                                         @PathParam("userId") String userId,
+                                                                         @PathParam("messageId") int messageId) {
     JsonObject object = new JsonObject();
     object.addProperty("result", String.format("Handled multiple path parameters %s %d", userId, messageId));
     responder.sendJson(HttpResponseStatus.OK, object);
@@ -228,6 +229,41 @@ public class TestHandler implements HttpHandler {
         int bytesUploaded = offHeapBuffer.position();
         responder.sendString(HttpResponseStatus.OK, "Uploaded:" + bytesUploaded);
         return;
+      }
+      @Override
+      public void handleError(Throwable cause) {
+        offHeapBuffer = null;
+      }
+    };
+  }
+
+  @Path("/stream/upload/fail")
+  @PUT
+  public BodyConsumer streamUploadFailure(HttpRequest request, HttpResponder responder) {
+    final int FILE_SIZE = 200 * 1024 * 1024;
+
+    return new BodyConsumer() {
+      int count = 0;
+      ByteBuffer offHeapBuffer = ByteBuffer.allocateDirect(FILE_SIZE);
+
+      @Override
+      public void chunk(ChannelBuffer request, HttpResponder responder) {
+        Preconditions.checkState(count ==1, "chunk error");
+        offHeapBuffer.put(request.array());
+        //responder.sendError(HttpResponseStatus.INTERNAL_SERVER_ERROR,"chunk failure");
+
+      }
+
+      @Override
+      public void finished(HttpResponder responder) {
+        int bytesUploaded = offHeapBuffer.position();
+        responder.sendString(HttpResponseStatus.OK, "Uploaded:" + bytesUploaded);
+        return;
+      }
+      @Override
+      public void handleError(Throwable cause) {
+        return;
+        //offHeapBuffer = null;
       }
     };
   }

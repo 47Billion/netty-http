@@ -133,6 +133,25 @@ public class HttpServerTest {
   }
 
   @Test
+  public void testStreamUploadFailure() throws IOException {
+    //create a random file to be uploaded.
+    int size = 10 * 1024 * 1024;
+    File fname = tmpFolder.newFile();
+    RandomAccessFile randf = new RandomAccessFile(fname, "rw");
+    randf.setLength(size);
+    randf.close();
+
+    //test stream upload
+    String endPoint = String.format("http://localhost:%d/test/v1/stream/upload/fail", port);
+    HttpPut put = new HttpPut(endPoint);
+    put.setEntity(new FileEntity(fname, ""));
+    HttpResponse response = request(put);
+    Assert.assertEquals(500, response.getStatusLine().getStatusCode());
+  }
+
+
+
+  @Test
   public void testChunkAggregatedUpload() throws IOException {
     //create a random file to be uploaded.
     int size = 69 * 1024;
