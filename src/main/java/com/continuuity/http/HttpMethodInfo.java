@@ -92,7 +92,7 @@ class HttpMethodInfo {
    */
 
   void sendError(HttpResponseStatus status, Throwable ex) {
-    if (isStreaming()) {
+    if (isStreaming() && bodyConsumer != null) {
       bodyConsumer.handleError(ex);
       bodyConsumer = null;
     }

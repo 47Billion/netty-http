@@ -136,7 +136,7 @@ public class HttpServerTest {
   @Test
   public void testStreamUploadFailure() throws IOException {
     //create a random file to be uploaded.
-    int size = 10 * 1024 * 1024;
+    int size = 50 * 1024 * 1024;
     File fname = tmpFolder.newFile();
     RandomAccessFile randf = new RandomAccessFile(fname, "rw");
     randf.setLength(size);
@@ -391,7 +391,7 @@ public class HttpServerTest {
   private HttpResponse request(HttpUriRequest uri, boolean keepalive) throws IOException {
     DefaultHttpClient client = new DefaultHttpClient();
    // This will set retry on error to be disabled. default is retry 3 times
-   client.setHttpRequestRetryHandler(new DefaultHttpRequestRetryHandler(0, false));
+    client.setHttpRequestRetryHandler(new DefaultHttpRequestRetryHandler(0, false));
     if (keepalive) {
       client.setKeepAliveStrategy(new DefaultConnectionKeepAliveStrategy());
     }

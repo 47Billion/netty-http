@@ -24,6 +24,8 @@ import org.jboss.netty.buffer.ChannelBufferInputStream;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.junit.Assert;
+import org.junit.ClassRule;
+import org.junit.rules.TemporaryFolder;
 
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
@@ -40,6 +42,7 @@ import java.nio.ByteBuffer;
 @SuppressWarnings("UnusedParameters")
 @Path("/test/v1")
 public class TestHandler implements HttpHandler {
+
   @Path("resource")
   @GET
   public void testGet(HttpRequest request, HttpResponder responder) {
@@ -239,7 +242,7 @@ public class TestHandler implements HttpHandler {
 
   @Path("/stream/upload/fail")
   @PUT
-  public BodyConsumer streamUploadFailure(HttpRequest request, HttpResponder responder) {
+  public BodyConsumer streamUploadFailure(HttpRequest request, HttpResponder responder)  {
     final int FILE_SIZE = 200 * 1024 * 1024;
 
     return new BodyConsumer() {
@@ -250,8 +253,6 @@ public class TestHandler implements HttpHandler {
       public void chunk(ChannelBuffer request, HttpResponder responder) {
         Preconditions.checkState(count == 1, "chunk error");
         offHeapBuffer.put(request.array());
-        //responder.sendError(HttpResponseStatus.INTERNAL_SERVER_ERROR,"chunk failure");
-
       }
 
       @Override
@@ -262,8 +263,7 @@ public class TestHandler implements HttpHandler {
       }
       @Override
       public void handleError(Throwable cause) {
-        return;
-        //offHeapBuffer = null;
+        offHeapBuffer = null;
       }
     };
   }
