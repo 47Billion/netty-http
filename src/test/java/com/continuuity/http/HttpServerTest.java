@@ -389,7 +389,8 @@ public class HttpServerTest {
 
   private HttpResponse request(HttpUriRequest uri, boolean keepalive) throws IOException {
     DefaultHttpClient client = new DefaultHttpClient();
-
+   // This will set retry on error to be disabled. default is retry 3 times
+   // client.setHttpRequestRetryHandler(new DefaultHttpRequestRetryHandler(0, false));
     if (keepalive) {
       client.setKeepAliveStrategy(new DefaultConnectionKeepAliveStrategy());
     }

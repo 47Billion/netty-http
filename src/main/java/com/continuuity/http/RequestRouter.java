@@ -17,10 +17,8 @@
 package com.continuuity.http;
 
 
-import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.ExceptionEvent;
@@ -111,6 +109,7 @@ public class RequestRouter extends SimpleChannelUpstreamHandler {
   }
 
 
+
   public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) {
 
       LOG.error("Exception caught in channel processing.", e.getCause());
@@ -121,7 +120,8 @@ public class RequestRouter extends SimpleChannelUpstreamHandler {
           methodInfo = null;
         } else {
           ChannelFuture future = Channels.future(ctx.getChannel());
-          future.addListener(ChannelFutureListener.CLOSE);
+          //TODO: The line below is commented out.
+//          future.addListener(ChannelFutureListener.CLOSE);
           Throwable cause = e.getCause();
           if (cause instanceof HandlerException) {
             Channels.write(ctx, future, ((HandlerException) cause).createFailureResponse());

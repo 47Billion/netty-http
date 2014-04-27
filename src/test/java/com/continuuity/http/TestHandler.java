@@ -248,7 +248,7 @@ public class TestHandler implements HttpHandler {
 
       @Override
       public void chunk(ChannelBuffer request, HttpResponder responder) {
-        Preconditions.checkState(count ==1, "chunk error");
+        Preconditions.checkState(count == 1, "chunk error");
         offHeapBuffer.put(request.array());
         //responder.sendError(HttpResponseStatus.INTERNAL_SERVER_ERROR,"chunk failure");
 
