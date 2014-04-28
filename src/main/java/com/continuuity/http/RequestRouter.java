@@ -48,10 +48,9 @@ public class RequestRouter extends SimpleChannelUpstreamHandler {
 
   private final int chunkMemoryLimit;
   private final HttpResourceHandler httpMethodHandler;
-
-  private  HttpMethodInfo methodInfo;
   private final AtomicBoolean exceptionRaised;
 
+  private HttpMethodInfo methodInfo;
 
   public RequestRouter(HttpResourceHandler methodHandler, int chunkMemoryLimit) {
     this.httpMethodHandler = methodHandler;

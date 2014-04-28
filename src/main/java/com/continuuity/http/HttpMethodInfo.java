@@ -39,6 +39,7 @@ class HttpMethodInfo {
   private final HttpResponder responder;
   private final Object[] args;
   private final boolean isStreaming;
+
   private BodyConsumer bodyConsumer;
 
   HttpMethodInfo(Method method, HttpHandler handler, HttpRequest request, HttpResponder responder, Object[] args) {
