@@ -139,10 +139,10 @@ public class HttpServerTest {
     //Assert.assertEquals(size, Integer.parseInt(EntityUtils.toString(response.getEntity()).split(":")[1].trim()));
   }
 
-  @Test(expected = IOException.class)
+  @Test
   public void testStreamUploadFailure() throws IOException {
     //create a random file to be uploaded.
-    int size = 10 * 1024  * 1024;
+    int size = 20 * 1024;
     File fname = tmpFolder.newFile();
     RandomAccessFile randf = new RandomAccessFile(fname, "rw");
     randf.setLength(size);
@@ -152,9 +152,9 @@ public class HttpServerTest {
     HttpURLConnection urlConn = (HttpURLConnection) url.openConnection();
     urlConn.setDoOutput(true);
     urlConn.setRequestMethod("PUT");
-    urlConn.setRequestProperty("Expect", "100-continue");
     Files.copy(fname, urlConn.getOutputStream());
-    System.out.println(urlConn.getResponseCode());
+    int responseCode = urlConn.getResponseCode();
+    Assert.assertEquals(500, urlConn.getResponseCode());
   }
 
 

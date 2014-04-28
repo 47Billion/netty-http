@@ -65,7 +65,13 @@ class HttpMethodInfo {
       // Casting guarantee to be succeeded.
       bodyConsumer = (BodyConsumer) method.invoke(handler, args);
       if (requestContent.readable()) {
-        bodyConsumer.chunk(requestContent, responder);
+        try {
+          bodyConsumer.chunk(requestContent, responder);
+        } catch (Throwable t) {
+          bodyConsumer.handleError(t);
+          bodyConsumer = null;
+          throw new HandlerException(HttpResponseStatus.INTERNAL_SERVER_ERROR, "", t);
+        }
       }
       if (!isChunkedRequest) {
         bodyConsumer.finished(responder);
@@ -78,13 +84,19 @@ class HttpMethodInfo {
     }
   }
 
-  void chunk(HttpChunk chunk)  {
+  void chunk(HttpChunk chunk) throws Exception {
     Preconditions.checkState(bodyConsumer != null, "Received chunked content without BodyConsumer.");
     if (chunk.isLast()) {
       bodyConsumer.finished(responder);
       bodyConsumer = null;
     } else {
-      bodyConsumer.chunk(chunk.getContent(), responder);
+      try {
+        bodyConsumer.chunk(chunk.getContent(), responder);
+      } catch (Throwable t) {
+        bodyConsumer.handleError(t);
+        bodyConsumer = null;
+        throw new HandlerException(HttpResponseStatus.INTERNAL_SERVER_ERROR, "", t);
+      }
     }
   }
 
@@ -92,10 +104,6 @@ class HttpMethodInfo {
    * Sends the error to responder.
    */
   void sendError(HttpResponseStatus status, Throwable ex) {
-    if (isStreaming() && bodyConsumer != null) {
-      bodyConsumer.handleError(ex);
-      bodyConsumer = null;
-    }
     responder.sendError(status, String.format("Error in executing: ") + ex.getMessage());
   }
 
