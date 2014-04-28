@@ -231,8 +231,8 @@ public class TestHandler implements HttpHandler {
       public void finished(HttpResponder responder) {
         int bytesUploaded = offHeapBuffer.position();
         responder.sendString(HttpResponseStatus.OK, "Uploaded:" + bytesUploaded);
-        return;
       }
+
       @Override
       public void handleError(Throwable cause) {
         offHeapBuffer = null;
@@ -260,8 +260,8 @@ public class TestHandler implements HttpHandler {
       public void finished(HttpResponder responder) {
         int bytesUploaded = offHeapBuffer.position();
         responder.sendString(HttpResponseStatus.OK, "Uploaded:" + bytesUploaded);
-        return;
       }
+
       @Override
       public void handleError(Throwable cause) {
         offHeapBuffer = null;
