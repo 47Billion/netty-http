@@ -17,12 +17,10 @@
 package com.continuuity.http;
 
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpMessage;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,10 +46,4 @@ public class HttpDispatcher extends SimpleChannelUpstreamHandler {
       super.messageReceived(ctx, e);
     }
   }
-
- /* @Override
-  public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
-    LOG.error("Exception caught in channel processing.", e.getCause());
-    ctx.getChannel().close();
-  }*/
 }

@@ -71,7 +71,6 @@ public class RequestRouter extends SimpleChannelUpstreamHandler {
   @Override
   public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
     if (exceptionRaised.get()) {
-      //LOG.info("Exception Raised Already. Router");
       return;
     }
     Object message = e.getMessage();
@@ -91,7 +90,7 @@ public class RequestRouter extends SimpleChannelUpstreamHandler {
    */
   private boolean handleRequest(HttpRequest httpRequest, Channel channel, ChannelHandlerContext ctx) throws Exception {
 
-     methodInfo = httpMethodHandler.getDestinationMethod(
+    methodInfo = httpMethodHandler.getDestinationMethod(
       httpRequest, new BasicHttpResponder(channel, HttpHeaders.isKeepAlive(httpRequest)));
 
     if (methodInfo == null) {
@@ -113,26 +112,25 @@ public class RequestRouter extends SimpleChannelUpstreamHandler {
 
   public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) {
 
-      LOG.error("Exception caught in channel processing.", e.getCause());
-      if (!exceptionRaised.get()) {
-        exceptionRaised.set(true);
+    LOG.error("Exception caught in channel processing.", e.getCause());
+    if (!exceptionRaised.get()) {
+      exceptionRaised.set(true);
 
-        if (methodInfo != null) {
-          methodInfo.sendError(HttpResponseStatus.INTERNAL_SERVER_ERROR, e.getCause());
-          methodInfo = null;
+      if (methodInfo != null) {
+        methodInfo.sendError(HttpResponseStatus.INTERNAL_SERVER_ERROR, e.getCause());
+        methodInfo = null;
+      } else {
+        ChannelFuture future = Channels.future(ctx.getChannel());
+        future.addListener(ChannelFutureListener.CLOSE);
+        Throwable cause = e.getCause();
+        if (cause instanceof HandlerException) {
+          Channels.write(ctx, future, ((HandlerException) cause).createFailureResponse());
         } else {
-          ChannelFuture future = Channels.future(ctx.getChannel());
-          //TODO: The line below is commented out.
-          //future.addListener(ChannelFutureListener.CLOSE);
-          Throwable cause = e.getCause();
-          if (cause instanceof HandlerException) {
-            Channels.write(ctx, future, ((HandlerException) cause).createFailureResponse());
-          } else {
-            HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1,
-                                                            HttpResponseStatus.INTERNAL_SERVER_ERROR);
-            Channels.write(ctx, future, response);
-          }
+          HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1,
+                                                          HttpResponseStatus.INTERNAL_SERVER_ERROR);
+          Channels.write(ctx, future, response);
         }
       }
+    }
   }
 }

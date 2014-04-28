@@ -33,6 +33,8 @@ import javax.ws.rs.POST;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
@@ -42,6 +44,9 @@ import java.nio.ByteBuffer;
 @SuppressWarnings("UnusedParameters")
 @Path("/test/v1")
 public class TestHandler implements HttpHandler {
+
+  @ClassRule
+  public static TemporaryFolder tmpFolder = new TemporaryFolder();
 
   @Path("resource")
   @GET
