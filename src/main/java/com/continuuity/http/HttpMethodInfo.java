@@ -77,7 +77,7 @@ class HttpMethodInfo {
     }
   }
 
-  void chunk(HttpChunk chunk) {
+  void chunk(HttpChunk chunk)  {
     Preconditions.checkState(bodyConsumer != null, "Received chunked content without BodyConsumer.");
     if (chunk.isLast()) {
       bodyConsumer.finished(responder);
@@ -91,7 +91,7 @@ class HttpMethodInfo {
    * Sends the error to responder.
    */
   void sendError(HttpResponseStatus status, Throwable ex) {
-    if (bodyConsumer != null) {
+    if (isStreaming() && bodyConsumer != null) {
       bodyConsumer.handleError(ex);
       bodyConsumer = null;
     }

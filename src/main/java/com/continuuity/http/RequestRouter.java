@@ -16,8 +16,6 @@
 
 package com.continuuity.http;
 
-import com.google.common.base.Preconditions;
-import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
@@ -36,6 +34,8 @@ import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+
 /**
  * RequestRouter that uses {@code HttpMethodHandler} to determine the http-handler method Signature of http request. It
  * uses this signature to dynamically configure the Netty Pipeline. Http Handler methods with return-type BodyConsumer
@@ -48,11 +48,15 @@ public class RequestRouter extends SimpleChannelUpstreamHandler {
 
   private final int chunkMemoryLimit;
   private final HttpResourceHandler httpMethodHandler;
+
   private  HttpMethodInfo methodInfo;
+  private final AtomicBoolean exceptionRaised;
+
 
   public RequestRouter(HttpResourceHandler methodHandler, int chunkMemoryLimit) {
     this.httpMethodHandler = methodHandler;
     this.chunkMemoryLimit = chunkMemoryLimit;
+    this.exceptionRaised = new AtomicBoolean(false);
   }
 
   /**
@@ -64,6 +68,9 @@ public class RequestRouter extends SimpleChannelUpstreamHandler {
    */
   @Override
   public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
+    if (exceptionRaised.get()) {
+      return;
+    }
     Object message = e.getMessage();
     if (!(message instanceof HttpRequest)) {
       super.messageReceived(ctx, e);
@@ -81,7 +88,7 @@ public class RequestRouter extends SimpleChannelUpstreamHandler {
    */
   private boolean handleRequest(HttpRequest httpRequest, Channel channel, ChannelHandlerContext ctx) throws Exception {
 
-     methodInfo = httpMethodHandler.getDestinationMethod(
+    methodInfo = httpMethodHandler.getDestinationMethod(
       httpRequest, new BasicHttpResponder(channel, HttpHeaders.isKeepAlive(httpRequest)));
 
     if (methodInfo == null) {
@@ -100,22 +107,29 @@ public class RequestRouter extends SimpleChannelUpstreamHandler {
     return true;
   }
 
-  @Override
-  public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)  {
+
+  public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) {
+
     LOG.error("Exception caught in channel processing.", e.getCause());
 
-    if (methodInfo != null) {
+    if (!exceptionRaised.get()) {
+      exceptionRaised.set(true);
+
+      if (methodInfo != null) {
         methodInfo.sendError(HttpResponseStatus.INTERNAL_SERVER_ERROR, e.getCause());
-        return;
-    }
-    ChannelFuture future = Channels.future(ctx.getChannel());
-    future.addListener(ChannelFutureListener.CLOSE);
-    Throwable cause = e.getCause();
-    if (cause instanceof HandlerException) {
-      Channels.write(ctx, future, ((HandlerException) cause).createFailureResponse());
-    } else {
-      HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR);
-      Channels.write(ctx, future, response);
+        methodInfo = null;
+      } else {
+        ChannelFuture future = Channels.future(ctx.getChannel());
+        future.addListener(ChannelFutureListener.CLOSE);
+        Throwable cause = e.getCause();
+        if (cause instanceof HandlerException) {
+          Channels.write(ctx, future, ((HandlerException) cause).createFailureResponse());
+        } else {
+          HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1,
+                                                          HttpResponseStatus.INTERNAL_SERVER_ERROR);
+          Channels.write(ctx, future, response);
+        }
+      }
     }
   }
 }
