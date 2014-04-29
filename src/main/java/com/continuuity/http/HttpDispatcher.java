@@ -17,12 +17,10 @@
 package com.continuuity.http;
 
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpMessage;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,27 +34,15 @@ public class HttpDispatcher extends SimpleChannelUpstreamHandler {
   private static final Logger LOG = LoggerFactory.getLogger(HttpDispatcher.class);
 
   @Override
-  public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {
+  public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
     HttpMethodInfo methodInfo  = (HttpMethodInfo) ctx.getPipeline().getContext("router").getAttachment();
-    try {
-      Object message = e.getMessage();
-
-      if (message instanceof HttpMessage) {
-        methodInfo.invoke();
-      } else if (message instanceof HttpChunk) {
-        methodInfo.chunk((HttpChunk) message);
-      } else {
-        super.messageReceived(ctx, e);
-      }
-    } catch (Exception ex) {
-      methodInfo.sendError(HttpResponseStatus.INTERNAL_SERVER_ERROR,
-                           String.format("Error in executing: ") + ex.getMessage());
+    Object message = e.getMessage();
+    if (message instanceof HttpMessage) {
+      methodInfo.invoke();
+    } else if (message instanceof HttpChunk) {
+      methodInfo.chunk((HttpChunk) message);
+    } else {
+      super.messageReceived(ctx, e);
     }
-  }
-
-  @Override
-  public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
-    LOG.error("Exception caught in channel processing.", e.getCause());
-    ctx.getChannel().close();
   }
 }

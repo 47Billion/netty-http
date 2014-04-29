@@ -13,7 +13,7 @@ import org.jboss.netty.handler.codec.http.HttpVersion;
 final class HandlerException extends Exception {
 
   private final HttpResponseStatus failureStatus;
-  private String message;
+  private final String message;
 
   HandlerException(HttpResponseStatus failureStatus, String message) {
     super(message);
