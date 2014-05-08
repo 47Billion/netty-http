@@ -16,23 +16,15 @@
 
 package com.continuuity.http;
 
+import com.google.common.base.Charsets;
 import com.google.common.collect.Lists;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
 import com.google.common.reflect.TypeToken;
 import com.google.common.util.concurrent.Service;
 import com.google.gson.Gson;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.client.methods.HttpPut;
-import org.apache.http.client.methods.HttpUriRequest;
-import org.apache.http.entity.FileEntity;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.DefaultConnectionKeepAliveStrategy;
-import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.impl.client.DefaultHttpRequestRetryHandler;
-import org.apache.http.util.EntityUtils;
+import org.jboss.netty.handler.codec.http.HttpHeaders;
+import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -40,12 +32,12 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.lang.reflect.Type;
 import java.net.HttpURLConnection;
+import java.net.URI;
 import java.net.URL;
 import java.util.List;
 import java.util.Map;
@@ -56,15 +48,16 @@ import java.util.Map;
 public class HttpServerTest {
 
   private static final Type STRING_MAP_TYPE = new TypeToken<Map<String, String>>() { }.getType();
-  static int port;
-  static NettyHttpService service;
+  private static final Gson GSON = new Gson();
+
+  private static NettyHttpService service;
+  private static URI baseURI;
 
   @ClassRule
   public static TemporaryFolder tmpFolder = new TemporaryFolder();
 
   @BeforeClass
   public static void setup() throws Exception {
-
     List<HttpHandler> handlers = Lists.newArrayList();
     handlers.add(new TestHandler());
 
@@ -76,36 +69,34 @@ public class HttpServerTest {
     service.startAndWait();
     Service.State state = service.state();
     Assert.assertEquals(Service.State.RUNNING, state);
-    port = service.getBindAddress().getPort();
+
+    int port = service.getBindAddress().getPort();
+    baseURI = URI.create(String.format("http://localhost:%d", port));
   }
 
   @AfterClass
   public static void teardown() throws Exception {
-    service.shutDown();
+    service.stopAndWait();
   }
 
   @Test
   public void testValidEndPoints() throws IOException {
-    String endPoint = String.format("http://localhost:%d/test/v1/resource?num=10", port);
-    HttpGet get = new HttpGet(endPoint);
-    HttpResponse response = request(get);
-    Assert.assertEquals(200, response.getStatusLine().getStatusCode());
+    HttpURLConnection urlConn = request("/test/v1/resource?num=10", HttpMethod.GET);
+    Assert.assertEquals(200, urlConn.getResponseCode());
+    String content = getContent(urlConn);
 
-    String content = getResponseContent(response);
-    Gson gson = new Gson();
-    Map<String, String> map = gson.fromJson(content, STRING_MAP_TYPE);
+    Map<String, String> map = GSON.fromJson(content, STRING_MAP_TYPE);
     Assert.assertEquals(1, map.size());
     Assert.assertEquals("Handled get in resource end-point", map.get("status"));
+    urlConn.disconnect();
 
-    endPoint = String.format("http://localhost:%d/test/v1/tweets/1", port);
-    get = new HttpGet(endPoint);
-    response = request(get);
-
-    Assert.assertEquals(200, response.getStatusLine().getStatusCode());
-    content = getResponseContent(response);
-    map = gson.fromJson(content, STRING_MAP_TYPE);
+    urlConn = request("/test/v1/tweets/1", HttpMethod.GET);
+    Assert.assertEquals(200, urlConn.getResponseCode());
+    content = getContent(urlConn);
+    map = GSON.fromJson(content, STRING_MAP_TYPE);
     Assert.assertEquals(1, map.size());
     Assert.assertEquals("Handled get in tweets end-point, id: 1", map.get("status"));
+    urlConn.disconnect();
   }
 
 
@@ -128,15 +119,10 @@ public class HttpServerTest {
     randf.close();
 
     //test stream upload
-    String endPoint = String.format("http://localhost:%d/test/v1/stream/upload", port);
-
-    URL url = new URL(String.format("http://localhost:%d/test/v1/stream/upload", port));
-    HttpURLConnection urlConn = (HttpURLConnection) url.openConnection();
-    urlConn.setDoOutput(true);
-    urlConn.setRequestMethod("PUT");
+    HttpURLConnection urlConn = request("/test/v1/stream/upload", HttpMethod.PUT);
     Files.copy(fname, urlConn.getOutputStream());
     Assert.assertEquals(200, urlConn.getResponseCode());
-    //Assert.assertEquals(size, Integer.parseInt(EntityUtils.toString(response.getEntity()).split(":")[1].trim()));
+    urlConn.disconnect();
   }
 
   @Test
@@ -148,16 +134,11 @@ public class HttpServerTest {
     randf.setLength(size);
     randf.close();
 
-    URL url = new URL(String.format("http://localhost:%d/test/v1/stream/upload/fail", port));
-    HttpURLConnection urlConn = (HttpURLConnection) url.openConnection();
-    urlConn.setDoOutput(true);
-    urlConn.setRequestMethod("PUT");
+    HttpURLConnection urlConn = request("/test/v1/stream/upload/fail", HttpMethod.PUT);
     Files.copy(fname, urlConn.getOutputStream());
-    int responseCode = urlConn.getResponseCode();
     Assert.assertEquals(500, urlConn.getResponseCode());
+    urlConn.disconnect();
   }
-
-
 
   @Test
   public void testChunkAggregatedUpload() throws IOException {
@@ -169,12 +150,13 @@ public class HttpServerTest {
     randf.close();
 
     //test chunked upload
-    String endPoint = String.format("http://localhost:%d/test/v1/aggregate/upload", port);
-    HttpPut put = new HttpPut(endPoint);
-    put.setEntity(new FileEntity(fname, ""));
-    HttpResponse response = request(put);
-    Assert.assertEquals(200, response.getStatusLine().getStatusCode());
-    Assert.assertEquals(size, Integer.parseInt(EntityUtils.toString(response.getEntity()).split(":")[1].trim()));
+    HttpURLConnection urlConn = request("/test/v1/aggregate/upload", HttpMethod.PUT);
+    urlConn.setChunkedStreamingMode(1024);
+    Files.copy(fname, urlConn.getOutputStream());
+    Assert.assertEquals(200, urlConn.getResponseCode());
+
+    Assert.assertEquals(size, Integer.parseInt(getContent(urlConn).split(":")[1].trim()));
+    urlConn.disconnect();
   }
 
   @Test
@@ -187,228 +169,202 @@ public class HttpServerTest {
     randf.close();
 
     //test chunked upload
-    String endPoint = String.format("http://localhost:%d/test/v1/aggregate/upload", port);
-    HttpPut put = new HttpPut(endPoint);
-    put.setEntity(new FileEntity(fname, ""));
-    HttpResponse response = request(put);
-    Assert.assertEquals(500, response.getStatusLine().getStatusCode());
+    HttpURLConnection urlConn = request("/test/v1/aggregate/upload", HttpMethod.PUT);
+    urlConn.setChunkedStreamingMode(1024);
+    Files.copy(fname, urlConn.getOutputStream());
+    Assert.assertEquals(500, urlConn.getResponseCode());
+    urlConn.disconnect();
   }
 
   @Test
   public void testPathWithMultipleMethods() throws IOException {
-    String endPoint = String.format("http://localhost:%d/test/v1/tweets/1", port);
-    HttpPut put = new HttpPut(endPoint);
-    put.setEntity(new StringEntity("data"));
-    HttpResponse response = request(put);
-    Assert.assertEquals(200, response.getStatusLine().getStatusCode());
+    HttpURLConnection urlConn = request("/test/v1/tweets/1", HttpMethod.GET);
+    Assert.assertEquals(200, urlConn.getResponseCode());
+    urlConn.disconnect();
+
+    urlConn = request("/test/v1/tweets/1", HttpMethod.PUT);
+    writeContent(urlConn, "data");
+    Assert.assertEquals(200, urlConn.getResponseCode());
+    urlConn.disconnect();
   }
 
-  @Test
-  public void testPathWithPost() throws IOException {
-    String endPoint = String.format("http://localhost:%d/test/v1/tweets/1", port);
-    HttpPut put = new HttpPut(endPoint);
-    put.setEntity(new StringEntity("data"));
-    HttpResponse response = request(put);
-    Assert.assertEquals(200, response.getStatusLine().getStatusCode());
-  }
 
   @Test
   public void testNonExistingEndPoints() throws IOException {
-    String endPoint = String.format("http://localhost:%d/test/v1/users", port);
-    HttpPost post = new HttpPost(endPoint);
-    post.setEntity(new StringEntity("data"));
-    HttpResponse response = request(post);
-    Assert.assertEquals(404, response.getStatusLine().getStatusCode());
+    HttpURLConnection urlConn = request("/test/v1/users", HttpMethod.POST);
+    writeContent(urlConn, "data");
+    Assert.assertEquals(404, urlConn.getResponseCode());
+    urlConn.disconnect();
   }
 
   @Test
   public void testPutWithData() throws IOException {
-    String endPoint = String.format("http://localhost:%d/test/v1/facebook/1/message", port);
-    HttpPut put = new HttpPut(endPoint);
-    put.setEntity(new StringEntity("Hello, World"));
-    HttpResponse response = request(put);
-    Assert.assertEquals(200, response.getStatusLine().getStatusCode());
-    String content = getResponseContent(response);
-    Gson gson = new Gson();
-    Map<String, String> map = gson.fromJson(content, STRING_MAP_TYPE);
+    HttpURLConnection urlConn = request("/test/v1/facebook/1/message", HttpMethod.PUT);
+    writeContent(urlConn, "Hello, World");
+    Assert.assertEquals(200, urlConn.getResponseCode());
+
+    String content = getContent(urlConn);
+
+    Map<String, String> map = GSON.fromJson(content, STRING_MAP_TYPE);
     Assert.assertEquals(1, map.size());
     Assert.assertEquals("Handled put in tweets end-point, id: 1. Content: Hello, World", map.get("result"));
+    urlConn.disconnect();
   }
 
   @Test
   public void testPostWithData() throws IOException {
-    String endPoint = String.format("http://localhost:%d/test/v1/facebook/1/message", port);
-    HttpPost post = new HttpPost(endPoint);
-    post.setEntity(new StringEntity("Hello, World"));
-    HttpResponse response = request(post);
-    Assert.assertEquals(200, response.getStatusLine().getStatusCode());
-    String content = getResponseContent(response);
-    Gson gson = new Gson();
-    Map<String, String> map = gson.fromJson(content, STRING_MAP_TYPE);
+    HttpURLConnection urlConn = request("/test/v1/facebook/1/message", HttpMethod.POST);
+    writeContent(urlConn, "Hello, World");
+    Assert.assertEquals(200, urlConn.getResponseCode());
+
+    String content = getContent(urlConn);
+
+    Map<String, String> map = GSON.fromJson(content, STRING_MAP_TYPE);
     Assert.assertEquals(1, map.size());
     Assert.assertEquals("Handled post in tweets end-point, id: 1. Content: Hello, World", map.get("result"));
+    urlConn.disconnect();
   }
 
   @Test
   public void testNonExistingMethods() throws IOException {
-    String endPoint = String.format("http://localhost:%d/test/v1/facebook/1/message", port);
-    HttpGet get = new HttpGet(endPoint);
-    HttpResponse response = request(get);
-    Assert.assertEquals(405, response.getStatusLine().getStatusCode());
+    HttpURLConnection urlConn = request("/test/v1/facebook/1/message", HttpMethod.GET);
+    Assert.assertEquals(405, urlConn.getResponseCode());
+    urlConn.disconnect();
   }
 
   @Test
   public void testKeepAlive() throws IOException {
-    String endPoint = String.format("http://localhost:%d/test/v1/tweets/1", port);
-    HttpPut put = new HttpPut(endPoint);
-    put.setEntity(new StringEntity("data"));
-    HttpResponse response = request(put, true);
-    Assert.assertEquals(200, response.getStatusLine().getStatusCode());
-    Assert.assertEquals("keep-alive", response.getFirstHeader("Connection").getValue());
+    HttpURLConnection urlConn = request("/test/v1/tweets/1", HttpMethod.PUT, true);
+    writeContent(urlConn, "data");
+    Assert.assertEquals(200, urlConn.getResponseCode());
+    System.out.println(urlConn.getHeaderField(HttpHeaders.Names.CONNECTION));
+
+    Assert.assertEquals("keep-alive", urlConn.getHeaderField(HttpHeaders.Names.CONNECTION));
+    urlConn.disconnect();
   }
 
   @Test
   public void testMultiplePathParameters() throws IOException {
-    String endPoint = String.format("http://localhost:%d/test/v1/user/sree/message/12", port);
-    HttpGet get = new HttpGet(endPoint);
-    HttpResponse response = request(get);
-    Assert.assertEquals(200, response.getStatusLine().getStatusCode());
-    String content = getResponseContent(response);
-    Gson gson = new Gson();
-    Map<String, String> map = gson.fromJson(content, STRING_MAP_TYPE);
+    HttpURLConnection urlConn = request("/test/v1/user/sree/message/12", HttpMethod.GET);
+    Assert.assertEquals(200, urlConn.getResponseCode());
+
+    String content = getContent(urlConn);
+
+    Map<String, String> map = GSON.fromJson(content, STRING_MAP_TYPE);
     Assert.assertEquals(1, map.size());
     Assert.assertEquals("Handled multiple path parameters sree 12", map.get("result"));
+    urlConn.disconnect();
   }
-
 
   //Test the end point where the parameter in path and order of declaration in method signature are different
   @Test
   public void testMultiplePathParametersWithParamterInDifferentOrder() throws IOException {
-    String endPoint = String.format("http://localhost:%d/test/v1/message/21/user/sree", port);
-    HttpGet get = new HttpGet(endPoint);
-    HttpResponse response = request(get);
-    Assert.assertEquals(200, response.getStatusLine().getStatusCode());
-    String content = getResponseContent(response);
-    Gson gson = new Gson();
-    Map<String, String> map = gson.fromJson(content, STRING_MAP_TYPE);
+    HttpURLConnection urlConn = request("/test/v1/message/21/user/sree", HttpMethod.GET);
+    Assert.assertEquals(200, urlConn.getResponseCode());
+
+    String content = getContent(urlConn);
+
+    Map<String, String> map = GSON.fromJson(content, STRING_MAP_TYPE);
     Assert.assertEquals(1, map.size());
     Assert.assertEquals("Handled multiple path parameters sree 21", map.get("result"));
+    urlConn.disconnect();
   }
 
   @Test
   public void testNotRoutablePathParamMismatch() throws IOException {
-    String endPoint = String.format("http://localhost:%d/test/v1/NotRoutable/sree", port);
-    HttpGet get = new HttpGet(endPoint);
-    HttpResponse response = request(get);
-    Assert.assertEquals(500, response.getStatusLine().getStatusCode());
+    HttpURLConnection urlConn = request("/test/v1/NotRoutable/sree", HttpMethod.GET);
+    Assert.assertEquals(500, urlConn.getResponseCode());
+    urlConn.disconnect();
   }
 
   @Test
   public void testNotRoutableMissingPathParam() throws IOException {
-    String endPoint = String.format("http://localhost:%d/test/v1/NotRoutable/sree/message/12", port);
-    HttpGet get = new HttpGet(endPoint);
-    HttpResponse response = request(get);
-    Assert.assertEquals(500, response.getStatusLine().getStatusCode());
-  }
-
-  @Test
-  public void testMultiMatchFoo() throws Exception {
-    String endPoint = String.format("http://localhost:%d/test/v1/multi-match/foo", port);
-    HttpGet get = new HttpGet(endPoint);
-    HttpResponse response = request(get);
-    Assert.assertEquals(200, response.getStatusLine().getStatusCode());
-    Assert.assertEquals("multi-match-get-actual-foo", getResponseContent(response));
-  }
-
-  @Test
-  public void testMultiMatchAll() throws Exception {
-    String endPoint = String.format("http://localhost:%d/test/v1/multi-match/foo/baz/id", port);
-    HttpGet get = new HttpGet(endPoint);
-    HttpResponse response = request(get);
-    Assert.assertEquals(200, response.getStatusLine().getStatusCode());
-    Assert.assertEquals("multi-match-*", getResponseContent(response));
-  }
-
-  @Test
-  public void testMultiMatchParam() throws Exception {
-    String endPoint = String.format("http://localhost:%d/test/v1/multi-match/bar", port);
-    HttpGet get = new HttpGet(endPoint);
-    HttpResponse response = request(get);
-    Assert.assertEquals(200, response.getStatusLine().getStatusCode());
-    Assert.assertEquals("multi-match-param-bar", getResponseContent(response));
-  }
-
-  @Test
-  public void testMultiMatchParamBar() throws Exception {
-    String endPoint = String.format("http://localhost:%d/test/v1/multi-match/id/bar", port);
-    HttpGet get = new HttpGet(endPoint);
-    HttpResponse response = request(get);
-    Assert.assertEquals(200, response.getStatusLine().getStatusCode());
-    Assert.assertEquals("multi-match-param-bar-id", getResponseContent(response));
-  }
-
-  @Test
-  public void testMultiMatchFooPut() throws Exception {
-    String endPoint = String.format("http://localhost:%d/test/v1/multi-match/foo", port);
-    HttpPut put = new HttpPut(endPoint);
-    HttpResponse response = request(put);
-    Assert.assertEquals(200, response.getStatusLine().getStatusCode());
-    Assert.assertEquals("multi-match-put-actual-foo", getResponseContent(response));
+    HttpURLConnection urlConn = request("/test/v1/NotRoutable/sree/message/12", HttpMethod.GET);
+    Assert.assertEquals(500, urlConn.getResponseCode());
+    urlConn.disconnect();
   }
 
   @Test
   public void testMultiMatchParamPut() throws Exception {
-    String endPoint = String.format("http://localhost:%d/test/v1/multi-match/bar", port);
-    HttpPut put = new HttpPut(endPoint);
-    HttpResponse response = request(put);
-    Assert.assertEquals(405, response.getStatusLine().getStatusCode());
+    HttpURLConnection urlConn = request("/test/v1/multi-match/bar", HttpMethod.PUT);
+    Assert.assertEquals(405, urlConn.getResponseCode());
+    urlConn.disconnect();
+  }
+
+  @Test
+  public void testMultiMatchFoo() throws Exception {
+    testContent("/test/v1/multi-match/foo", "multi-match-get-actual-foo");
+  }
+
+  @Test
+  public void testMultiMatchAll() throws Exception {
+    testContent("/test/v1/multi-match/foo/baz/id", "multi-match-*");
+  }
+
+  @Test
+  public void testMultiMatchParam() throws Exception {
+    testContent("/test/v1/multi-match/bar", "multi-match-param-bar");
+  }
+
+  @Test
+  public void testMultiMatchParamBar() throws Exception {
+    testContent("/test/v1/multi-match/id/bar", "multi-match-param-bar-id");
   }
 
   @Test
   public void testMultiMatchFooParamBar() throws Exception {
-    String endPoint = String.format("http://localhost:%d/test/v1/multi-match/foo/id/bar", port);
-    HttpGet get = new HttpGet(endPoint);
-    HttpResponse response = request(get);
-    Assert.assertEquals(200, response.getStatusLine().getStatusCode());
-    Assert.assertEquals("multi-match-foo-param-bar-id", getResponseContent(response));
+    testContent("/test/v1/multi-match/foo/id/bar", "multi-match-foo-param-bar-id");
   }
 
   @Test
   public void testMultiMatchFooBarParam() throws Exception {
-    String endPoint = String.format("http://localhost:%d/test/v1/multi-match/foo/bar/id", port);
-    HttpGet get = new HttpGet(endPoint);
-    HttpResponse response = request(get);
-    Assert.assertEquals(200, response.getStatusLine().getStatusCode());
-    Assert.assertEquals("multi-match-foo-bar-param-id", getResponseContent(response));
+    testContent("/test/v1/multi-match/foo/bar/id", "multi-match-foo-bar-param-id");
   }
 
   @Test
   public void testMultiMatchFooBarParamId() throws Exception {
-    String endPoint = String.format("http://localhost:%d/test/v1/multi-match/foo/bar/bar/bar", port);
-    HttpGet get = new HttpGet(endPoint);
-    HttpResponse response = request(get);
-    Assert.assertEquals(200, response.getStatusLine().getStatusCode());
-    Assert.assertEquals("multi-match-foo-bar-param-bar-id-bar", getResponseContent(response));
+    testContent("/test/v1/multi-match/foo/bar/bar/bar", "multi-match-foo-bar-param-bar-id-bar");
   }
 
-  private HttpResponse request(HttpUriRequest uri) throws IOException {
-    return request(uri, false);
+  @Test
+  public void testMultiMatchFooPut() throws Exception {
+    testContent("/test/v1/multi-match/foo", "multi-match-put-actual-foo", HttpMethod.PUT);
   }
 
-  private HttpResponse request(HttpUriRequest uri, boolean keepalive) throws IOException {
-    DefaultHttpClient client = new DefaultHttpClient();
-    client.setHttpRequestRetryHandler(new DefaultHttpRequestRetryHandler(0, false));
-    if (keepalive) {
-      client.setKeepAliveStrategy(new DefaultConnectionKeepAliveStrategy());
+  private void testContent(String path, String content) throws IOException {
+    testContent(path, content, HttpMethod.GET);
+  }
+
+  private void testContent(String path, String content, HttpMethod method) throws IOException {
+    HttpURLConnection urlConn = request(path, method);
+    Assert.assertEquals(200, urlConn.getResponseCode());
+    Assert.assertEquals(content, getContent(urlConn));
+    urlConn.disconnect();
+  }
+
+  private HttpURLConnection request(String path, HttpMethod method) throws IOException {
+    return request(path, method, false);
+  }
+
+  private HttpURLConnection request(String path, HttpMethod method, boolean keepAlive) throws IOException {
+    URL url = baseURI.resolve(path).toURL();
+    HttpURLConnection urlConn = (HttpURLConnection) url.openConnection();
+    if (method == HttpMethod.POST || method == HttpMethod.PUT) {
+      urlConn.setDoOutput(true);
     }
-    return client.execute(uri);
+    urlConn.setRequestMethod(method.getName());
+    if (!keepAlive) {
+      urlConn.setRequestProperty(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.CLOSE);
+    }
+
+    return urlConn;
   }
 
-  private String getResponseContent(HttpResponse response) throws IOException {
-    ByteArrayOutputStream bos = new ByteArrayOutputStream();
-    ByteStreams.copy(response.getEntity().getContent(), bos);
-    String result = bos.toString("UTF-8");
-    bos.close();
-    return result;
+  private String getContent(HttpURLConnection urlConn) throws IOException {
+    return new String(ByteStreams.toByteArray(urlConn.getInputStream()), Charsets.UTF_8);
+  }
+
+  private void writeContent(HttpURLConnection urlConn, String content) throws IOException {
+    urlConn.getOutputStream().write(content.getBytes(Charsets.UTF_8));
   }
 }
