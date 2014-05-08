@@ -17,12 +17,9 @@
 package com.continuuity.http;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.Service;
-import org.apache.http.Header;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.message.BasicHeader;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.junit.AfterClass;
@@ -33,6 +30,10 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.net.HttpURLConnection;
+import java.net.URI;
+import java.net.URL;
+import java.util.Map;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.TimeUnit;
 
@@ -43,7 +44,7 @@ public class HandlerHookTest {
   private static final Logger LOG = LoggerFactory.getLogger(HandlerHookTest.class);
 
   private static String hostname = "127.0.0.1";
-  private static int port;
+  private static URI baseURI;
   private static NettyHttpService service;
   private static final TestHandlerHook handlerHook1 = new TestHandlerHook();
   private static final TestHandlerHook handlerHook2 = new TestHandlerHook();
@@ -60,7 +61,9 @@ public class HandlerHookTest {
     service.startAndWait();
     Service.State state = service.state();
     Assert.assertEquals(Service.State.RUNNING, state);
-    port = service.getBindAddress().getPort();
+
+    int port = service.getBindAddress().getPort();
+    baseURI = URI.create(String.format("http://%s:%d", hostname, port));
   }
 
   @Before
@@ -71,8 +74,8 @@ public class HandlerHookTest {
 
   @Test
   public void testHandlerHookCall() throws Exception {
-    HttpResponse response = doGet("/test/v1/resource");
-    Assert.assertEquals(HttpResponseStatus.OK.getCode(), response.getStatusLine().getStatusCode());
+    int status = doGet("/test/v1/resource");
+    Assert.assertEquals(HttpResponseStatus.OK.getCode(), status);
 
     awaitPostHook();
     Assert.assertEquals(1, handlerHook1.getNumPreCalls());
@@ -84,8 +87,8 @@ public class HandlerHookTest {
 
   @Test
   public void testPreHookReject() throws Exception {
-    HttpResponse response = doGet("/test/v1/resource", new Header[]{new BasicHeader("X-Request-Type", "Reject")});
-    Assert.assertEquals(HttpResponseStatus.NOT_ACCEPTABLE.getCode(), response.getStatusLine().getStatusCode());
+    int status = doGet("/test/v1/resource", "X-Request-Type", "Reject");
+    Assert.assertEquals(HttpResponseStatus.NOT_ACCEPTABLE.getCode(), status);
 
     // Wait for any post handlers to be called
     TimeUnit.MILLISECONDS.sleep(100);
@@ -100,8 +103,8 @@ public class HandlerHookTest {
 
   @Test
   public void testHandlerException() throws Exception {
-    HttpResponse response = doGet("/test/v1/exception");
-    Assert.assertEquals(HttpResponseStatus.INTERNAL_SERVER_ERROR.getCode(), response.getStatusLine().getStatusCode());
+    int status = doGet("/test/v1/exception");
+    Assert.assertEquals(HttpResponseStatus.INTERNAL_SERVER_ERROR.getCode(), status);
 
     awaitPostHook();
     Assert.assertEquals(1, handlerHook1.getNumPreCalls());
@@ -113,9 +116,8 @@ public class HandlerHookTest {
 
   @Test
   public void testPreException() throws Exception {
-    HttpResponse response = doGet("/test/v1/resource",
-                                  new Header[]{new BasicHeader("X-Request-Type", "PreException")});
-    Assert.assertEquals(HttpResponseStatus.INTERNAL_SERVER_ERROR.getCode(), response.getStatusLine().getStatusCode());
+    int status = doGet("/test/v1/resource", "X-Request-Type", "PreException");
+    Assert.assertEquals(HttpResponseStatus.INTERNAL_SERVER_ERROR.getCode(), status);
 
     // Wait for any post handlers to be called
     TimeUnit.MILLISECONDS.sleep(100);
@@ -130,9 +132,8 @@ public class HandlerHookTest {
 
   @Test
   public void testPostException() throws Exception {
-    HttpResponse response = doGet("/test/v1/resource",
-                                  new Header[]{new BasicHeader("X-Request-Type", "PostException")});
-    Assert.assertEquals(HttpResponseStatus.OK.getCode(), response.getStatusLine().getStatusCode());
+    int status = doGet("/test/v1/resource", "X-Request-Type", "PostException");
+    Assert.assertEquals(HttpResponseStatus.OK.getCode(), status);
 
     awaitPostHook();
     Assert.assertEquals(1, handlerHook1.getNumPreCalls());
@@ -144,8 +145,8 @@ public class HandlerHookTest {
 
   @Test
   public void testUnknownPath() throws Exception {
-    HttpResponse response = doGet("/unknown/path/test/v1/resource");
-    Assert.assertEquals(HttpResponseStatus.NOT_FOUND.getCode(), response.getStatusLine().getStatusCode());
+    int status = doGet("/unknown/path/test/v1/resource");
+    Assert.assertEquals(HttpResponseStatus.NOT_FOUND.getCode(), status);
 
     // Wait for any post handlers to be called
     TimeUnit.MILLISECONDS.sleep(100);
@@ -158,7 +159,7 @@ public class HandlerHookTest {
 
   @AfterClass
   public static void teardown() throws Exception {
-    service.shutDown();
+    service.stopAndWait();
   }
 
   private void awaitPostHook() throws Exception {
@@ -224,18 +225,32 @@ public class HandlerHookTest {
     }
   }
 
-  public static HttpResponse doGet(String resource) throws Exception {
-    return doGet(resource, null);
+  private static int doGet(String resource) throws Exception {
+    return doGet(resource, ImmutableMap.<String, String>of());
   }
 
-  public static HttpResponse doGet(String resource, Header[] headers) throws Exception {
-    DefaultHttpClient client = new DefaultHttpClient();
-    HttpGet get = new HttpGet("http://" + hostname + ":" + port + resource);
+  private static int doGet(String resource, String key, String value, String...keyValues) throws Exception {
+    Map<String, String> headerMap = Maps.newHashMap();
+    headerMap.put(key, value);
 
-    if (headers != null) {
-      get.setHeaders(headers);
+    for (int i = 0; i < keyValues.length; i += 2) {
+      headerMap.put(keyValues[i], keyValues[i + 1]);
     }
-    return client.execute(get);
+    return doGet(resource, headerMap);
   }
 
+  private static int doGet(String resource, Map<String, String> headers) throws Exception {
+    URL url = baseURI.resolve(resource).toURL();
+    HttpURLConnection urlConn = (HttpURLConnection) url.openConnection();
+    try {
+      if (headers != null) {
+        for (Map.Entry<String, String> entry : headers.entrySet()) {
+          urlConn.setRequestProperty(entry.getKey(), entry.getValue());
+        }
+      }
+      return urlConn.getResponseCode();
+    } finally {
+      urlConn.disconnect();
+    }
+  }
 }

@@ -16,18 +16,16 @@
 
 package com.continuuity.http;
 
+import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
+import com.google.common.collect.Maps;
+import com.google.common.io.ByteStreams;
 import com.google.common.util.concurrent.Service;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
-import org.apache.http.Header;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPut;
-import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.util.EntityUtils;
+import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.junit.AfterClass;
@@ -35,6 +33,10 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.URI;
+import java.net.URL;
 import java.util.Map;
 
 /**
@@ -44,8 +46,8 @@ public class URLRewriterTest {
   private static final Gson GSON = new Gson();
 
   private static String hostname = "127.0.0.1";
-  private static int port;
   private static NettyHttpService service;
+  private static URI baseURI;
 
   @BeforeClass
   public static void setup() throws Exception {
@@ -59,49 +61,52 @@ public class URLRewriterTest {
     service.startAndWait();
     Service.State state = service.state();
     Assert.assertEquals(Service.State.RUNNING, state);
-    port = service.getBindAddress().getPort();
+    int port = service.getBindAddress().getPort();
+
+    baseURI = URI.create(String.format("http://%s:%d", hostname, port));
   }
 
   @AfterClass
   public static void teardown() throws Exception {
-    service.shutDown();
+    service.stopAndWait();
   }
 
   @Test
   public void testUrlRewrite() throws Exception {
-    HttpResponse response = doGet("/rewrite/test/v1/resource");
-    Assert.assertEquals(HttpResponseStatus.OK.getCode(), response.getStatusLine().getStatusCode());
+    int status = doGet("/rewrite/test/v1/resource");
+    Assert.assertEquals(HttpResponseStatus.OK.getCode(), status);
 
-    response = doPut("/rewrite/test/v1/tweets/7648");
-    Assert.assertEquals(HttpResponseStatus.OK.getCode(), response.getStatusLine().getStatusCode());
-    Map<String, String> stringMap = GSON.fromJson(EntityUtils.toString(response.getEntity()),
+    HttpURLConnection urlConn = request("/rewrite/test/v1/tweets/7648", HttpMethod.PUT);
+    Assert.assertEquals(HttpResponseStatus.OK.getCode(), urlConn.getResponseCode());
+    Map<String, String> stringMap = GSON.fromJson(getContent(urlConn),
                                                   new TypeToken<Map<String, String>>() { }.getType());
-    Assert.assertEquals(ImmutableMap.of("status", "Handled put in tweets end-point, id: 7648"),
-                        stringMap);
+    Assert.assertEquals(ImmutableMap.of("status", "Handled put in tweets end-point, id: 7648"), stringMap);
+
+    urlConn.disconnect();
   }
 
   @Test
   public void testUrlRewriteNormalize() throws Exception {
-    HttpResponse response = doGet("//rewrite//test/v1//resource");
-    Assert.assertEquals(HttpResponseStatus.OK.getCode(), response.getStatusLine().getStatusCode());
+    int status = doGet("/rewrite//test/v1//resource");
+    Assert.assertEquals(HttpResponseStatus.OK.getCode(), status);
   }
 
   @Test
   public void testRegularCall() throws Exception {
-    HttpResponse response = doGet("/test/v1/resource");
-    Assert.assertEquals(HttpResponseStatus.OK.getCode(), response.getStatusLine().getStatusCode());
+    int status = doGet("/test/v1/resource");
+    Assert.assertEquals(HttpResponseStatus.OK.getCode(), status);
   }
 
   @Test
   public void testUrlRewriteUnknownPath() throws Exception {
-    HttpResponse response = doGet("/rewrite/unknown/test/v1/resource");
-    Assert.assertEquals(HttpResponseStatus.NOT_FOUND.getCode(), response.getStatusLine().getStatusCode());
+    int status = doGet("/rewrite/unknown/test/v1/resource");
+    Assert.assertEquals(HttpResponseStatus.NOT_FOUND.getCode(), status);
   }
 
   @Test
   public void testUrlRewriteRedirect() throws Exception {
-    HttpResponse response = doGet("/redirect/test/v1/resource");
-    Assert.assertEquals(HttpResponseStatus.OK.getCode(), response.getStatusLine().getStatusCode());
+    int status = doGet("/redirect/test/v1/resource");
+    Assert.assertEquals(HttpResponseStatus.OK.getCode(), status);
   }
 
   private static class TestURLRewriter implements URLRewriter {
@@ -120,23 +125,48 @@ public class URLRewriterTest {
     }
   }
 
-  public static HttpResponse doGet(String resource) throws Exception {
-    return doGet(resource, null);
+  private static int doGet(String resource) throws Exception {
+    return doGet(resource, ImmutableMap.<String, String>of());
   }
 
-  public static HttpResponse doGet(String resource, Header[] headers) throws Exception {
-    DefaultHttpClient client = new DefaultHttpClient();
-    HttpGet get = new HttpGet("http://" + hostname + ":" + port + resource);
+  private static int doGet(String resource, String key, String value, String...keyValues) throws Exception {
+    Map<String, String> headerMap = Maps.newHashMap();
+    headerMap.put(key, value);
 
-    if (headers != null) {
-      get.setHeaders(headers);
+    for (int i = 0; i < keyValues.length; i += 2) {
+      headerMap.put(keyValues[i], keyValues[i + 1]);
     }
-    return client.execute(get);
+    return doGet(resource, headerMap);
   }
 
-  public static HttpResponse doPut(String resource) throws Exception {
-    DefaultHttpClient client = new DefaultHttpClient();
-    HttpPut put = new HttpPut("http://" + hostname + ":" + port + resource);
-    return client.execute(put);
+  private static int doGet(String resource, Map<String, String> headers) throws Exception {
+    URL url = baseURI.resolve(resource).toURL();
+    HttpURLConnection urlConn = (HttpURLConnection) url.openConnection();
+    try {
+      if (headers != null) {
+        for (Map.Entry<String, String> entry : headers.entrySet()) {
+          urlConn.setRequestProperty(entry.getKey(), entry.getValue());
+        }
+      }
+      return urlConn.getResponseCode();
+    } finally {
+      urlConn.disconnect();
+    }
+  }
+
+
+  private HttpURLConnection request(String path, HttpMethod method) throws IOException {
+    URL url = baseURI.resolve(path).toURL();
+    HttpURLConnection urlConn = (HttpURLConnection) url.openConnection();
+    if (method == HttpMethod.POST || method == HttpMethod.PUT) {
+      urlConn.setDoOutput(true);
+    }
+    urlConn.setRequestMethod(method.getName());
+
+    return urlConn;
+  }
+
+  private String getContent(HttpURLConnection urlConn) throws IOException {
+    return new String(ByteStreams.toByteArray(urlConn.getInputStream()), Charsets.UTF_8);
   }
 }
