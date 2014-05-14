@@ -84,6 +84,11 @@ Example: Sample HTTP service that manages an application lifecycle.
             //deploy the app and send response
             responder.sendStatus(HttpResponseStatus.OK);
           }
+          @Override
+          public void handleError(Throwable cause) {
+            // if there were any error during this process, this will be called.
+            // do clean-up here.
+          }
         }
       }
 
