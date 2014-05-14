@@ -68,6 +68,30 @@ Example: Sample HTTP service that manages an application lifecycle.
         responder.sendStatus(HttpResponseStatus.OK);
       }
 
+        // For deploying larger-size applications we can use the BodyConsumer abstract-class,
+        // we can handle the chunks as we receive it
+        // and handle clean up when we are done in the finished method, this approach is memory efficient
+      @Path("deploybig")
+      @POST
+      public BodyConsumer deployBig(HttpRequest request, HttpResponder responder) {
+        return new BodyConsumer() {
+          @Override
+          public void chunk(ChannelBuffer request, HttpResponder responder) {
+            // write the incoming data to a file
+          }
+          @Override
+          public void finished(HttpResponder responder) {
+            //deploy the app and send response
+            responder.sendStatus(HttpResponseStatus.OK);
+          }
+          @Override
+          public void handleError(Throwable cause) {
+            // if there were any error during this process, this will be called.
+            // do clean-up here.
+          }
+        }
+      }
+
       // The HTTP endpoint v1/apps/{id}/start will be handled by the start method given below
       @Path("{id}/start")
       @POST
