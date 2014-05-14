@@ -68,9 +68,9 @@ Example: Sample HTTP service that manages an application lifecycle.
         responder.sendStatus(HttpResponseStatus.OK);
       }
 
-      /* For deploying larger-size applications we can use the BodyConsumer abstract-class,
-         we can handle the chunks as we receive it
-         and handle clean up when we are done in the finished method, this approach is memory efficient */
+        // For deploying larger-size applications we can use the BodyConsumer abstract-class,
+        // we can handle the chunks as we receive it
+        // and handle clean up when we are done in the finished method, this approach is memory efficient
       @Path("deploybig")
       @POST
       public BodyConsumer deployBig(HttpRequest request, HttpResponder responder) {
