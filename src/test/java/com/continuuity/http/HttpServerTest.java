@@ -68,6 +68,7 @@ public class HttpServerTest {
 
     builder.addFirstChannelHandler("test", new SimpleChannelHandler());
     builder.addLastChannelHandler("test2", new SimpleChannelHandler());
+    builder.addAfterChannelHandler("decoder", "testhandler", new TestChannelHandler());
 
     service = builder.build();
     service.startAndWait();
@@ -293,6 +294,17 @@ public class HttpServerTest {
     HttpURLConnection urlConn = request("/test/v1/multi-match/bar", HttpMethod.PUT);
     Assert.assertEquals(405, urlConn.getResponseCode());
     urlConn.disconnect();
+  }
+
+  /**
+   * Test that the TestChannelHandler that was added using the builder adds the correct header field and value.
+   * @throws Exception
+   */
+  @Test
+  public void testChannelHandlerInjection() throws Exception {
+    HttpURLConnection urlConn = request("/test/v1/tweets/1", HttpMethod.GET);
+    Assert.assertEquals(200, urlConn.getResponseCode());
+    Assert.assertEquals(urlConn.getHeaderField(TestChannelHandler.HEADER_FIELD), TestChannelHandler.HEADER_VALUE);
   }
 
   @Test
