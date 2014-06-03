@@ -92,7 +92,7 @@ public final class NettyHttpService extends AbstractIdleService {
    * @param urlRewriter URLRewriter to rewrite incoming URLs.
    * @param httpHandlers HttpHandlers to handle the calls.
    * @param handlerHooks Hooks to be called before/after request processing by httpHandlers.
-   * @param handlerCollection
+   * @param handlerCollection ChannelHandlers that are to be added to the Service's pipeline.
    */
   public NettyHttpService(InetSocketAddress bindAddress, int bossThreadPoolSize, int workerThreadPoolSize,
                           int execThreadPoolSize, long execThreadKeepAliveSecs,
