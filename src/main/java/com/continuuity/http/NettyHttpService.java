@@ -21,6 +21,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.AbstractIdleService;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.sun.tools.javac.util.Pair;
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelEvent;
@@ -43,7 +44,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
-import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.Executor;
@@ -72,7 +73,8 @@ public final class NettyHttpService extends AbstractIdleService {
   private final HandlerContext handlerContext;
   private final ChannelGroup channelGroup;
   private final HttpResourceHandler resourceHandler;
-  private final HashMap<String, LinkedHashMap<String, ChannelHandler>> pipelineHandlers;
+  private final Builder.BuilderHandlerCollection handlerCollection;
+
 
   private ServerBootstrap bootstrap;
   private InetSocketAddress bindAddress;
@@ -81,7 +83,7 @@ public final class NettyHttpService extends AbstractIdleService {
 
   /**
    * Initialize NettyHttpService.
-   *  @param bindAddress Address for the service to bind to.
+   * @param bindAddress Address for the service to bind to.
    * @param bossThreadPoolSize Size of the boss thread pool.
    * @param workerThreadPoolSize Size of the worker thread pool.
    * @param execThreadPoolSize Size of the thread pool for the executor.
@@ -91,7 +93,7 @@ public final class NettyHttpService extends AbstractIdleService {
    * @param urlRewriter URLRewriter to rewrite incoming URLs.
    * @param httpHandlers HttpHandlers to handle the calls.
    * @param handlerHooks Hooks to be called before/after request processing by httpHandlers.
-   * @param pipelineHandlers ChannelHandlers to be added to the pipeline.
+   * @param handlerCollection
    */
   public NettyHttpService(InetSocketAddress bindAddress, int bossThreadPoolSize, int workerThreadPoolSize,
                           int execThreadPoolSize, long execThreadKeepAliveSecs,
@@ -99,7 +101,7 @@ public final class NettyHttpService extends AbstractIdleService {
                           RejectedExecutionHandler rejectedExecutionHandler, URLRewriter urlRewriter,
                           Iterable<? extends HttpHandler> httpHandlers,
                           Iterable<? extends HandlerHook> handlerHooks, int httpChunkLimit,
-                          HashMap<String, LinkedHashMap<String, ChannelHandler>> pipelineHandlers) {
+                          Builder.BuilderHandlerCollection handlerCollection) {
     this.bindAddress = bindAddress;
     this.bossThreadPoolSize = bossThreadPoolSize;
     this.workerThreadPoolSize = workerThreadPoolSize;
@@ -111,7 +113,7 @@ public final class NettyHttpService extends AbstractIdleService {
     this.resourceHandler = new HttpResourceHandler(httpHandlers, handlerHooks, urlRewriter);
     this.handlerContext = new BasicHandlerContext(this.resourceHandler);
     this.httpChunkLimit = httpChunkLimit;
-    this.pipelineHandlers = pipelineHandlers;
+    this.handlerCollection = handlerCollection;
   }
 
   /**
@@ -191,9 +193,8 @@ public final class NettyHttpService extends AbstractIdleService {
       public ChannelPipeline getPipeline() throws Exception {
         ChannelPipeline pipeline = Channels.pipeline();
 
-        LinkedHashMap<String, ChannelHandler> firstHandlers = pipelineHandlers.get("first");
-        for(String key : firstHandlers.keySet()) {
-          pipeline.addLast(key, firstHandlers.get(key));
+        for(Pair<String, ChannelHandler> pair : handlerCollection.getFirstHandlers()) {
+          pipeline.addFirst(pair.fst, pair.snd);
         }
 
         pipeline.addLast("tracker", connectionTracker);
@@ -206,9 +207,16 @@ public final class NettyHttpService extends AbstractIdleService {
         }
         pipeline.addLast("dispatcher", new HttpDispatcher());
 
-        LinkedHashMap<String, ChannelHandler> lastHandlers = pipelineHandlers.get("last");
-        for(String key : lastHandlers.keySet()) {
-          pipeline.addLast(key, lastHandlers.get(key));
+        for(Pair<String, ChannelHandler> pair : handlerCollection.getLastHandlers()) {
+          pipeline.addLast(pair.fst, pair.snd);
+        }
+
+        for(Map.Entry<String, Pair<String, ChannelHandler>> key : handlerCollection.getBeforeHandlers().entrySet()) {
+          pipeline.addBefore(key.getKey(), key.getValue().fst, key.getValue().snd);
+        }
+
+        for(Map.Entry<String, Pair<String, ChannelHandler>> key : handlerCollection.getAfterHandlers().entrySet()) {
+          pipeline.addAfter(key.getKey(), key.getValue().fst, key.getValue().snd);
         }
 
         return pipeline;
@@ -257,6 +265,53 @@ public final class NettyHttpService extends AbstractIdleService {
    */
   public static class Builder {
 
+    private class BuilderHandlerCollection {
+      private ArrayList<Pair<String, ChannelHandler>> firstHandlers;
+      private ArrayList<Pair<String, ChannelHandler>> lastHandlers;
+      private LinkedHashMap<String, Pair<String, ChannelHandler>> beforeHandlers;
+      private LinkedHashMap<String, Pair<String, ChannelHandler>> afterHandlers;
+
+      private BuilderHandlerCollection() {
+        firstHandlers = new ArrayList<Pair<String, ChannelHandler>>();
+        lastHandlers = new ArrayList<Pair<String, ChannelHandler>>();
+        beforeHandlers = new LinkedHashMap<String, Pair<String, ChannelHandler>>();
+        afterHandlers = new LinkedHashMap<String, Pair<String, ChannelHandler>>();
+      }
+
+      private void addFirstHandler(String name, ChannelHandler handler) {
+        firstHandlers.add(new Pair<String, ChannelHandler>(name, handler));
+      }
+
+      private void addLastHandler(String name, ChannelHandler handler) {
+        lastHandlers.add(new Pair<String, ChannelHandler>(name, handler));
+      }
+
+      public ArrayList<Pair<String, ChannelHandler>> getLastHandlers() {
+        return lastHandlers;
+      }
+
+      public ArrayList<Pair<String, ChannelHandler>> getFirstHandlers() {
+        return firstHandlers;
+      }
+
+      public LinkedHashMap<String, Pair<String, ChannelHandler>> getBeforeHandlers() {
+        return beforeHandlers;
+      }
+
+      private void addBeforeHandler(String before, String name, ChannelHandler handler) {
+        beforeHandlers.put(before, new Pair<String, ChannelHandler>(name, handler));
+      }
+
+      public LinkedHashMap<String, Pair<String, ChannelHandler>> getAfterHandlers() {
+        return afterHandlers;
+      }
+
+      private void addAfterHandler(String before, String name, ChannelHandler handler) {
+        afterHandlers.put(before, new Pair<String, ChannelHandler>(name, handler));
+      }
+
+    }
+
     private static final int DEFAULT_BOSS_THREAD_POOL_SIZE = 1;
     private static final int DEFAULT_WORKER_THREAD_POOL_SIZE = 10;
     private static final int DEFAULT_CONNECTION_BACKLOG = 1000;
@@ -278,7 +333,7 @@ public final class NettyHttpService extends AbstractIdleService {
     private RejectedExecutionHandler rejectedExecutionHandler;
     private Map<String, Object> channelConfigs;
     private int httpChunkLimit;
-    private HashMap<String, LinkedHashMap<String, ChannelHandler>> pipelineHandlers;
+    private BuilderHandlerCollection handlerCollection;
 
     //Private constructor to prevent instantiating Builder instance directly.
     private Builder() {
@@ -291,10 +346,7 @@ public final class NettyHttpService extends AbstractIdleService {
       port = 0;
       channelConfigs = Maps.newHashMap();
       channelConfigs.put("backlog", DEFAULT_CONNECTION_BACKLOG);
-
-      pipelineHandlers = new HashMap<String, LinkedHashMap<String, ChannelHandler>>();
-      pipelineHandlers.put("first", new LinkedHashMap<String, ChannelHandler>());
-      pipelineHandlers.put("last", new LinkedHashMap<String, ChannelHandler>());
+      handlerCollection = new BuilderHandlerCollection();
     }
 
     /**
@@ -304,7 +356,7 @@ public final class NettyHttpService extends AbstractIdleService {
      * @return
      */
     public Builder addLastChannelHandler(String name, ChannelHandler handler) {
-      this.pipelineHandlers.get("last").put(name, handler);
+      handlerCollection.addLastHandler(name, handler);
       return this;
     }
 
@@ -315,7 +367,17 @@ public final class NettyHttpService extends AbstractIdleService {
      * @return
      */
     public Builder addFirstChannelHandler(String name, ChannelHandler handler) {
-      this.pipelineHandlers.get("first").put(name, handler);
+      handlerCollection.addFirstHandler(name, handler);
+      return this;
+    }
+
+    public Builder addBeforeChannelHandler(String before, String name, ChannelHandler handler) {
+      handlerCollection.addBeforeHandler(before, name, handler);
+      return this;
+    }
+
+    public Builder addAfterChannelHandler(String after, String name, ChannelHandler handler) {
+      handlerCollection.addAfterHandler(after, name, handler);
       return this;
     }
 
@@ -478,7 +540,7 @@ public final class NettyHttpService extends AbstractIdleService {
 
       return new NettyHttpService(bindAddress, bossThreadPoolSize, workerThreadPoolSize,
                                   execThreadPoolSize, execThreadKeepAliveSecs, channelConfigs, rejectedExecutionHandler,
-                                  urlRewriter, handlers, handlerHooks, httpChunkLimit, pipelineHandlers);
+                                  urlRewriter, handlers, handlerHooks, httpChunkLimit, handlerCollection);
     }
   }
 }
