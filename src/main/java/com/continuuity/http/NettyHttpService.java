@@ -45,7 +45,6 @@ import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
@@ -211,12 +210,14 @@ public final class NettyHttpService extends AbstractIdleService {
           pipeline.addLast(pair.fst, pair.snd);
         }
 
-        for(Map.Entry<String, Pair<String, ChannelHandler>> key : handlerCollection.getBeforeHandlers().entrySet()) {
-          pipeline.addBefore(key.getKey(), key.getValue().fst, key.getValue().snd);
-        }
-
-        for(Map.Entry<String, Pair<String, ChannelHandler>> key : handlerCollection.getAfterHandlers().entrySet()) {
-          pipeline.addAfter(key.getKey(), key.getValue().fst, key.getValue().snd);
+        ArrayList<Builder.BuilderHandlerCollection.IntermediaryHandler> intermediaryHandlers =
+                                                                          handlerCollection.getIntermediaryHandlers();
+        for(Builder.BuilderHandlerCollection.IntermediaryHandler handler : intermediaryHandlers) {
+          if(handler.getAction().equals("before")) {
+            pipeline.addBefore(handler.getOtherHandlerName(), handler.getName(), handler.getHandler());
+          } else {
+            pipeline.addAfter(handler.getOtherHandlerName(), handler.getName(), handler.getHandler());
+          }
         }
 
         return pipeline;
@@ -265,17 +266,53 @@ public final class NettyHttpService extends AbstractIdleService {
    */
   public static class Builder {
 
+    /**
+     * Maintain a record of all the ChannelHandlers added to the pipeline along with order of addition.
+     */
     private class BuilderHandlerCollection {
       private ArrayList<Pair<String, ChannelHandler>> firstHandlers;
       private ArrayList<Pair<String, ChannelHandler>> lastHandlers;
-      private LinkedHashMap<String, Pair<String, ChannelHandler>> beforeHandlers;
-      private LinkedHashMap<String, Pair<String, ChannelHandler>> afterHandlers;
+      private ArrayList<IntermediaryHandler> intermediaryHandlers;
 
       private BuilderHandlerCollection() {
         firstHandlers = new ArrayList<Pair<String, ChannelHandler>>();
         lastHandlers = new ArrayList<Pair<String, ChannelHandler>>();
-        beforeHandlers = new LinkedHashMap<String, Pair<String, ChannelHandler>>();
-        afterHandlers = new LinkedHashMap<String, Pair<String, ChannelHandler>>();
+        intermediaryHandlers = new ArrayList<IntermediaryHandler>();
+      }
+
+      /**
+       * Encapsulate information regarding location of the handler being added.
+       * Maintains a record of what action to take (before/after) and the name of the handler which that action
+       * is in relation to.
+       */
+      private class IntermediaryHandler {
+        private String action;
+        private String otherHandlerName;
+        private String name;
+        private ChannelHandler handler;
+
+        private IntermediaryHandler(String action, String otherHandler, String name, ChannelHandler handler) {
+          this.action = action;
+          this.otherHandlerName = otherHandler;
+          this.name = name;
+          this.handler = handler;
+        }
+
+        private String getAction() {
+          return action;
+        }
+
+        private String getOtherHandlerName() {
+          return otherHandlerName;
+        }
+
+        private String getName() {
+          return name;
+        }
+
+        private ChannelHandler getHandler() {
+          return handler;
+        }
       }
 
       private void addFirstHandler(String name, ChannelHandler handler) {
@@ -294,22 +331,17 @@ public final class NettyHttpService extends AbstractIdleService {
         return firstHandlers;
       }
 
-      public LinkedHashMap<String, Pair<String, ChannelHandler>> getBeforeHandlers() {
-        return beforeHandlers;
-      }
-
       private void addBeforeHandler(String before, String name, ChannelHandler handler) {
-        beforeHandlers.put(before, new Pair<String, ChannelHandler>(name, handler));
+        intermediaryHandlers.add(new IntermediaryHandler("before", before, name, handler));
       }
 
-      public LinkedHashMap<String, Pair<String, ChannelHandler>> getAfterHandlers() {
-        return afterHandlers;
+      private void addAfterHandler(String after, String name, ChannelHandler handler) {
+        intermediaryHandlers.add(new IntermediaryHandler("after", after, name, handler));
       }
 
-      private void addAfterHandler(String before, String name, ChannelHandler handler) {
-        afterHandlers.put(before, new Pair<String, ChannelHandler>(name, handler));
+      private ArrayList<IntermediaryHandler> getIntermediaryHandlers() {
+        return intermediaryHandlers;
       }
-
     }
 
     private static final int DEFAULT_BOSS_THREAD_POOL_SIZE = 1;
@@ -351,9 +383,9 @@ public final class NettyHttpService extends AbstractIdleService {
 
     /**
      * Add a ChannelHandler to the end of the pipeline.
-     * @param name
-     * @param handler
-     * @return
+     * @param name Name of {@code ChannelHandler}.
+     * @param handler Instance of {@code ChannelHandler}.
+     * @return instance of {@code Builder}.
      */
     public Builder addLastChannelHandler(String name, ChannelHandler handler) {
       handlerCollection.addLastHandler(name, handler);
@@ -362,20 +394,34 @@ public final class NettyHttpService extends AbstractIdleService {
 
     /**
      * Add a ChannelHandler to the beginning of the pipeline.
-     * @param name
-     * @param handler
-     * @return
+     * @param name Name of {@code ChannelHandler}.
+     * @param handler Instance of {@code ChannelHandler}.
+     * @return instance of {@code Builder}.
      */
     public Builder addFirstChannelHandler(String name, ChannelHandler handler) {
       handlerCollection.addFirstHandler(name, handler);
       return this;
     }
 
+    /**
+     * Add a ChannelHandler to the pipeline before the named ChannelHandler.
+     * @param before Name of ChannelHandler to add before.
+     * @param name Name of {@code ChannelHandler}.
+     * @param handler Instance of {@code ChannelHandler}.
+     * @return Instance of {@code Builder}.
+     */
     public Builder addBeforeChannelHandler(String before, String name, ChannelHandler handler) {
       handlerCollection.addBeforeHandler(before, name, handler);
       return this;
     }
 
+    /**
+     * Add a ChannelHandler to the pipeline after the named ChannelHandler.
+     * @param after Name of ChannelHandler to add after.
+     * @param name Name of {@code ChannelHandler}.
+     * @param handler Instance of {@code ChannelHandler}.
+     * @return Instance of {@code Builder}.
+     */
     public Builder addAfterChannelHandler(String after, String name, ChannelHandler handler) {
       handlerCollection.addAfterHandler(after, name, handler);
       return this;
