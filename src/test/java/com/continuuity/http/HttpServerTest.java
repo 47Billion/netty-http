@@ -23,6 +23,7 @@ import com.google.common.io.Files;
 import com.google.common.reflect.TypeToken;
 import com.google.common.util.concurrent.Service;
 import com.google.gson.Gson;
+import org.jboss.netty.channel.SimpleChannelHandler;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.junit.AfterClass;
@@ -64,6 +65,9 @@ public class HttpServerTest {
     NettyHttpService.Builder builder = NettyHttpService.builder();
     builder.addHttpHandlers(handlers);
     builder.setHttpChunkLimit(75 * 1024);
+
+    builder.addFirstChannelHandler("test", new SimpleChannelHandler());
+    builder.addLastChannelHandler("test2", new SimpleChannelHandler());
 
     service = builder.build();
     service.startAndWait();
