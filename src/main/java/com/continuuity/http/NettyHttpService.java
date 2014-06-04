@@ -43,7 +43,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
 import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
@@ -71,7 +70,7 @@ public final class NettyHttpService extends AbstractIdleService {
   private final HandlerContext handlerContext;
   private final ChannelGroup channelGroup;
   private final HttpResourceHandler resourceHandler;
-  private final ArrayList<Function<ChannelPipeline, ChannelPipeline>> pipelineModifiers;
+  private final Function<ChannelPipeline, ChannelPipeline> pipelineModifier;
 
 
   private ServerBootstrap bootstrap;
@@ -108,7 +107,7 @@ public final class NettyHttpService extends AbstractIdleService {
     this.resourceHandler = new HttpResourceHandler(httpHandlers, handlerHooks, urlRewriter);
     this.handlerContext = new BasicHandlerContext(this.resourceHandler);
     this.httpChunkLimit = httpChunkLimit;
-    this.pipelineModifiers = null;
+    this.pipelineModifier = null;
   }
 
   /**
@@ -123,15 +122,15 @@ public final class NettyHttpService extends AbstractIdleService {
    * @param urlRewriter URLRewriter to rewrite incoming URLs.
    * @param httpHandlers HttpHandlers to handle the calls.
    * @param handlerHooks Hooks to be called before/after request processing by httpHandlers.
-   * @param pipelineModifiers List of functions used to modify the pipeline.
+   * @param pipelineModifier Function used to modify the pipeline.
    */
-  public NettyHttpService(InetSocketAddress bindAddress, int bossThreadPoolSize, int workerThreadPoolSize,
+  private NettyHttpService(InetSocketAddress bindAddress, int bossThreadPoolSize, int workerThreadPoolSize,
                           int execThreadPoolSize, long execThreadKeepAliveSecs,
                           Map<String, Object> channelConfigs,
                           RejectedExecutionHandler rejectedExecutionHandler, URLRewriter urlRewriter,
                           Iterable<? extends HttpHandler> httpHandlers,
                           Iterable<? extends HandlerHook> handlerHooks, int httpChunkLimit,
-                          ArrayList<Function<ChannelPipeline, ChannelPipeline>> pipelineModifiers) {
+                          Function<ChannelPipeline, ChannelPipeline> pipelineModifier) {
     this.bindAddress = bindAddress;
     this.bossThreadPoolSize = bossThreadPoolSize;
     this.workerThreadPoolSize = workerThreadPoolSize;
@@ -143,7 +142,7 @@ public final class NettyHttpService extends AbstractIdleService {
     this.resourceHandler = new HttpResourceHandler(httpHandlers, handlerHooks, urlRewriter);
     this.handlerContext = new BasicHandlerContext(this.resourceHandler);
     this.httpChunkLimit = httpChunkLimit;
-    this.pipelineModifiers = pipelineModifiers;
+    this.pipelineModifier = pipelineModifier;
   }
 
   /**
@@ -233,10 +232,8 @@ public final class NettyHttpService extends AbstractIdleService {
         }
         pipeline.addLast("dispatcher", new HttpDispatcher());
 
-        if (pipelineModifiers != null) {
-          for(Function<ChannelPipeline, ChannelPipeline> modifier : pipelineModifiers) {
-            pipeline = modifier.apply(pipeline);
-          }
+        if (pipelineModifier != null) {
+          pipeline = pipelineModifier.apply(pipeline);
         }
 
         return pipeline;
@@ -306,7 +303,7 @@ public final class NettyHttpService extends AbstractIdleService {
     private RejectedExecutionHandler rejectedExecutionHandler;
     private Map<String, Object> channelConfigs;
     private int httpChunkLimit;
-    private ArrayList<Function<ChannelPipeline, ChannelPipeline>> pipelineModifiers;
+    private Function<ChannelPipeline, ChannelPipeline> pipelineModifier;
 
     //Private constructor to prevent instantiating Builder instance directly.
     private Builder() {
@@ -319,7 +316,6 @@ public final class NettyHttpService extends AbstractIdleService {
       port = 0;
       channelConfigs = Maps.newHashMap();
       channelConfigs.put("backlog", DEFAULT_CONNECTION_BACKLOG);
-      pipelineModifiers = new ArrayList<Function<ChannelPipeline, ChannelPipeline>>();
     }
 
     /**
@@ -328,7 +324,7 @@ public final class NettyHttpService extends AbstractIdleService {
      * @return
      */
     public Builder modifyChannelPipeline(Function<ChannelPipeline, ChannelPipeline> function) {
-      pipelineModifiers.add(function);
+      this.pipelineModifier = function;
       return this;
     }
 
@@ -491,7 +487,7 @@ public final class NettyHttpService extends AbstractIdleService {
 
       return new NettyHttpService(bindAddress, bossThreadPoolSize, workerThreadPoolSize,
                                   execThreadPoolSize, execThreadKeepAliveSecs, channelConfigs, rejectedExecutionHandler,
-                                  urlRewriter, handlers, handlerHooks, httpChunkLimit, pipelineModifiers);
+                                  urlRewriter, handlers, handlerHooks, httpChunkLimit, pipelineModifier);
     }
   }
 }
