@@ -17,13 +17,14 @@
 package com.continuuity.http;
 
 import com.google.common.base.Charsets;
+import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
 import com.google.common.reflect.TypeToken;
 import com.google.common.util.concurrent.Service;
 import com.google.gson.Gson;
-import org.jboss.netty.channel.SimpleChannelHandler;
+import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.junit.AfterClass;
@@ -42,6 +43,7 @@ import java.net.URI;
 import java.net.URL;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.Nullable;
 
 /**
  * Test the HttpServer.
@@ -66,9 +68,14 @@ public class HttpServerTest {
     builder.addHttpHandlers(handlers);
     builder.setHttpChunkLimit(75 * 1024);
 
-    builder.addFirstChannelHandler("test", new SimpleChannelHandler());
-    builder.addLastChannelHandler("test2", new SimpleChannelHandler());
-    builder.addAfterChannelHandler("decoder", "testhandler", new TestChannelHandler());
+    builder.modifyChannelPipeline(new Function<ChannelPipeline, ChannelPipeline>() {
+      @Nullable
+      @Override
+      public ChannelPipeline apply(@Nullable ChannelPipeline channelPipeline) {
+        channelPipeline.addAfter("decoder", "testhandler", new TestChannelHandler());
+        return channelPipeline;
+      }
+    });
 
     service = builder.build();
     service.startAndWait();
