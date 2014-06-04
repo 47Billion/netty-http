@@ -79,6 +79,38 @@ public final class NettyHttpService extends AbstractIdleService {
   private InetSocketAddress bindAddress;
   private int httpChunkLimit;
 
+  /**
+   * Initialize NettyHttpService.
+   * @param bindAddress Address for the service to bind to.
+   * @param bossThreadPoolSize Size of the boss thread pool.
+   * @param workerThreadPoolSize Size of the worker thread pool.
+   * @param execThreadPoolSize Size of the thread pool for the executor.
+   * @param execThreadKeepAliveSecs  maximum time that excess idle threads will wait for new tasks before terminating.
+   * @param channelConfigs Configurations for the server socket channel.
+   * @param rejectedExecutionHandler rejection policy for executor.
+   * @param urlRewriter URLRewriter to rewrite incoming URLs.
+   * @param httpHandlers HttpHandlers to handle the calls.
+   * @param handlerHooks Hooks to be called before/after request processing by httpHandlers.
+   */
+  public NettyHttpService(InetSocketAddress bindAddress, int bossThreadPoolSize, int workerThreadPoolSize,
+                          int execThreadPoolSize, long execThreadKeepAliveSecs,
+                          Map<String, Object> channelConfigs,
+                          RejectedExecutionHandler rejectedExecutionHandler, URLRewriter urlRewriter,
+                          Iterable<? extends HttpHandler> httpHandlers,
+                          Iterable<? extends HandlerHook> handlerHooks, int httpChunkLimit) {
+    this.bindAddress = bindAddress;
+    this.bossThreadPoolSize = bossThreadPoolSize;
+    this.workerThreadPoolSize = workerThreadPoolSize;
+    this.execThreadPoolSize = execThreadPoolSize;
+    this.execThreadKeepAliveSecs = execThreadKeepAliveSecs;
+    this.channelConfigs = ImmutableMap.copyOf(channelConfigs);
+    this.rejectedExecutionHandler = rejectedExecutionHandler;
+    this.channelGroup = new DefaultChannelGroup();
+    this.resourceHandler = new HttpResourceHandler(httpHandlers, handlerHooks, urlRewriter);
+    this.handlerContext = new BasicHandlerContext(this.resourceHandler);
+    this.httpChunkLimit = httpChunkLimit;
+    this.handlerCollection = null;
+  }
 
   /**
    * Initialize NettyHttpService.
@@ -192,8 +224,10 @@ public final class NettyHttpService extends AbstractIdleService {
       public ChannelPipeline getPipeline() throws Exception {
         ChannelPipeline pipeline = Channels.pipeline();
 
-        for(Pair<String, ChannelHandler> pair : handlerCollection.getFirstHandlers()) {
-          pipeline.addFirst(pair.fst, pair.snd);
+        if (handlerCollection != null) {
+          for(Pair<String, ChannelHandler> pair : handlerCollection.getFirstHandlers()) {
+            pipeline.addFirst(pair.fst, pair.snd);
+          }
         }
 
         pipeline.addLast("tracker", connectionTracker);
@@ -206,17 +240,19 @@ public final class NettyHttpService extends AbstractIdleService {
         }
         pipeline.addLast("dispatcher", new HttpDispatcher());
 
-        for(Pair<String, ChannelHandler> pair : handlerCollection.getLastHandlers()) {
-          pipeline.addLast(pair.fst, pair.snd);
-        }
+        if (handlerCollection != null) {
+          for(Pair<String, ChannelHandler> pair : handlerCollection.getLastHandlers()) {
+            pipeline.addLast(pair.fst, pair.snd);
+          }
 
-        ArrayList<Builder.BuilderHandlerCollection.IntermediaryHandler> intermediaryHandlers =
-                                                                          handlerCollection.getIntermediaryHandlers();
-        for(Builder.BuilderHandlerCollection.IntermediaryHandler handler : intermediaryHandlers) {
-          if(handler.getAction().equals("before")) {
-            pipeline.addBefore(handler.getOtherHandlerName(), handler.getName(), handler.getHandler());
-          } else {
-            pipeline.addAfter(handler.getOtherHandlerName(), handler.getName(), handler.getHandler());
+          ArrayList<Builder.BuilderHandlerCollection.IntermediaryHandler> intermediaryHandlers =
+            handlerCollection.getIntermediaryHandlers();
+          for(Builder.BuilderHandlerCollection.IntermediaryHandler handler : intermediaryHandlers) {
+            if(handler.getAction().equals("before")) {
+              pipeline.addBefore(handler.getOtherHandlerName(), handler.getName(), handler.getHandler());
+            } else {
+              pipeline.addAfter(handler.getOtherHandlerName(), handler.getName(), handler.getHandler());
+            }
           }
         }
 
