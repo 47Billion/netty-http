@@ -16,6 +16,7 @@
 
 package com.continuuity.http;
 
+import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
@@ -69,15 +70,15 @@ public final class NettyHttpService extends AbstractIdleService {
   private final HandlerContext handlerContext;
   private final ChannelGroup channelGroup;
   private final HttpResourceHandler resourceHandler;
+  private final Function<ChannelPipeline, ChannelPipeline> pipelineModifier;
+
 
   private ServerBootstrap bootstrap;
   private InetSocketAddress bindAddress;
   private int httpChunkLimit;
 
-
   /**
    * Initialize NettyHttpService.
-   *
    * @param bindAddress Address for the service to bind to.
    * @param bossThreadPoolSize Size of the boss thread pool.
    * @param workerThreadPoolSize Size of the worker thread pool.
@@ -106,6 +107,42 @@ public final class NettyHttpService extends AbstractIdleService {
     this.resourceHandler = new HttpResourceHandler(httpHandlers, handlerHooks, urlRewriter);
     this.handlerContext = new BasicHandlerContext(this.resourceHandler);
     this.httpChunkLimit = httpChunkLimit;
+    this.pipelineModifier = null;
+  }
+
+  /**
+   * Initialize NettyHttpService.
+   * @param bindAddress Address for the service to bind to.
+   * @param bossThreadPoolSize Size of the boss thread pool.
+   * @param workerThreadPoolSize Size of the worker thread pool.
+   * @param execThreadPoolSize Size of the thread pool for the executor.
+   * @param execThreadKeepAliveSecs  maximum time that excess idle threads will wait for new tasks before terminating.
+   * @param channelConfigs Configurations for the server socket channel.
+   * @param rejectedExecutionHandler rejection policy for executor.
+   * @param urlRewriter URLRewriter to rewrite incoming URLs.
+   * @param httpHandlers HttpHandlers to handle the calls.
+   * @param handlerHooks Hooks to be called before/after request processing by httpHandlers.
+   * @param pipelineModifier Function used to modify the pipeline.
+   */
+  private NettyHttpService(InetSocketAddress bindAddress, int bossThreadPoolSize, int workerThreadPoolSize,
+                          int execThreadPoolSize, long execThreadKeepAliveSecs,
+                          Map<String, Object> channelConfigs,
+                          RejectedExecutionHandler rejectedExecutionHandler, URLRewriter urlRewriter,
+                          Iterable<? extends HttpHandler> httpHandlers,
+                          Iterable<? extends HandlerHook> handlerHooks, int httpChunkLimit,
+                          Function<ChannelPipeline, ChannelPipeline> pipelineModifier) {
+    this.bindAddress = bindAddress;
+    this.bossThreadPoolSize = bossThreadPoolSize;
+    this.workerThreadPoolSize = workerThreadPoolSize;
+    this.execThreadPoolSize = execThreadPoolSize;
+    this.execThreadKeepAliveSecs = execThreadKeepAliveSecs;
+    this.channelConfigs = ImmutableMap.copyOf(channelConfigs);
+    this.rejectedExecutionHandler = rejectedExecutionHandler;
+    this.channelGroup = new DefaultChannelGroup();
+    this.resourceHandler = new HttpResourceHandler(httpHandlers, handlerHooks, urlRewriter);
+    this.handlerContext = new BasicHandlerContext(this.resourceHandler);
+    this.httpChunkLimit = httpChunkLimit;
+    this.pipelineModifier = pipelineModifier;
   }
 
   /**
@@ -195,6 +232,10 @@ public final class NettyHttpService extends AbstractIdleService {
         }
         pipeline.addLast("dispatcher", new HttpDispatcher());
 
+        if (pipelineModifier != null) {
+          pipeline = pipelineModifier.apply(pipeline);
+        }
+
         return pipeline;
       }
     });
@@ -262,6 +303,7 @@ public final class NettyHttpService extends AbstractIdleService {
     private RejectedExecutionHandler rejectedExecutionHandler;
     private Map<String, Object> channelConfigs;
     private int httpChunkLimit;
+    private Function<ChannelPipeline, ChannelPipeline> pipelineModifier;
 
     //Private constructor to prevent instantiating Builder instance directly.
     private Builder() {
@@ -274,6 +316,16 @@ public final class NettyHttpService extends AbstractIdleService {
       port = 0;
       channelConfigs = Maps.newHashMap();
       channelConfigs.put("backlog", DEFAULT_CONNECTION_BACKLOG);
+    }
+
+    /**
+     * Modify the pipeline upon build by applying the function.
+     * @param function Function that modifies and returns a pipeline.
+     * @return
+     */
+    public Builder modifyChannelPipeline(Function<ChannelPipeline, ChannelPipeline> function) {
+      this.pipelineModifier = function;
+      return this;
     }
 
     /**
@@ -435,7 +487,7 @@ public final class NettyHttpService extends AbstractIdleService {
 
       return new NettyHttpService(bindAddress, bossThreadPoolSize, workerThreadPoolSize,
                                   execThreadPoolSize, execThreadKeepAliveSecs, channelConfigs, rejectedExecutionHandler,
-                                  urlRewriter, handlers, handlerHooks, httpChunkLimit);
+                                  urlRewriter, handlers, handlerHooks, httpChunkLimit, pipelineModifier);
     }
   }
 }

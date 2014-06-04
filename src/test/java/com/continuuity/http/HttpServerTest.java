@@ -17,12 +17,14 @@
 package com.continuuity.http;
 
 import com.google.common.base.Charsets;
+import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
 import com.google.common.reflect.TypeToken;
 import com.google.common.util.concurrent.Service;
 import com.google.gson.Gson;
+import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.junit.AfterClass;
@@ -41,6 +43,7 @@ import java.net.URI;
 import java.net.URL;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.Nullable;
 
 /**
  * Test the HttpServer.
@@ -64,6 +67,15 @@ public class HttpServerTest {
     NettyHttpService.Builder builder = NettyHttpService.builder();
     builder.addHttpHandlers(handlers);
     builder.setHttpChunkLimit(75 * 1024);
+
+    builder.modifyChannelPipeline(new Function<ChannelPipeline, ChannelPipeline>() {
+      @Nullable
+      @Override
+      public ChannelPipeline apply(@Nullable ChannelPipeline channelPipeline) {
+        channelPipeline.addAfter("decoder", "testhandler", new TestChannelHandler());
+        return channelPipeline;
+      }
+    });
 
     service = builder.build();
     service.startAndWait();
@@ -289,6 +301,17 @@ public class HttpServerTest {
     HttpURLConnection urlConn = request("/test/v1/multi-match/bar", HttpMethod.PUT);
     Assert.assertEquals(405, urlConn.getResponseCode());
     urlConn.disconnect();
+  }
+
+  /**
+   * Test that the TestChannelHandler that was added using the builder adds the correct header field and value.
+   * @throws Exception
+   */
+  @Test
+  public void testChannelPipelineModification() throws Exception {
+    HttpURLConnection urlConn = request("/test/v1/tweets/1", HttpMethod.GET);
+    Assert.assertEquals(200, urlConn.getResponseCode());
+    Assert.assertEquals(urlConn.getHeaderField(TestChannelHandler.HEADER_FIELD), TestChannelHandler.HEADER_VALUE);
   }
 
   @Test
