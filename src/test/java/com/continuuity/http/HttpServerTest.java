@@ -308,7 +308,7 @@ public class HttpServerTest {
    * @throws Exception
    */
   @Test
-  public void testChannelHandlerInjection() throws Exception {
+  public void testChannelPipelineModification() throws Exception {
     HttpURLConnection urlConn = request("/test/v1/tweets/1", HttpMethod.GET);
     Assert.assertEquals(200, urlConn.getResponseCode());
     Assert.assertEquals(urlConn.getHeaderField(TestChannelHandler.HEADER_FIELD), TestChannelHandler.HEADER_VALUE);
