@@ -23,6 +23,7 @@ import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
 /**
@@ -104,7 +105,12 @@ class HttpMethodInfo {
    * Sends the error to responder.
    */
   void sendError(HttpResponseStatus status, Throwable ex) {
-    responder.sendError(status, String.format("Error in executing: ") + ex.getMessage());
+    if (ex instanceof InvocationTargetException) {
+      responder.sendError(status, String.format("Exception Encountered while processing request : %s",
+                                                ((InvocationTargetException) ex).getTargetException().getMessage()));
+    } else {
+      responder.sendError(status, String.format("Exception Encountered while processing request: %s", ex.getMessage()));
+    }
   }
 
   /**

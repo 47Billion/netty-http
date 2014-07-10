@@ -17,6 +17,7 @@
 package com.continuuity.http;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Throwables;
 import com.google.gson.JsonObject;
 import org.apache.commons.io.IOUtils;
 import org.jboss.netty.buffer.ChannelBuffer;
@@ -273,6 +274,13 @@ public class TestHandler implements HttpHandler {
     ChannelBuffer content = request.getContent();
     int bytesUploaded = content.readableBytes();
     response.sendString(HttpResponseStatus.OK, "Uploaded:" + bytesUploaded);
+  }
+
+
+  @Path("/uexception")
+  @GET
+  public void testException(HttpRequest request, HttpResponder responder) {
+    throw Throwables.propagate(new RuntimeException("User Exception"));
   }
 
   @Override
