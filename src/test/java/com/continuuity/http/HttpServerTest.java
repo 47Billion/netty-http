@@ -24,6 +24,7 @@ import com.google.common.io.Files;
 import com.google.common.reflect.TypeToken;
 import com.google.common.util.concurrent.Service;
 import com.google.gson.Gson;
+import org.apache.commons.io.IOUtils;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -300,6 +301,15 @@ public class HttpServerTest {
   public void testMultiMatchParamPut() throws Exception {
     HttpURLConnection urlConn = request("/test/v1/multi-match/bar", HttpMethod.PUT);
     Assert.assertEquals(405, urlConn.getResponseCode());
+    urlConn.disconnect();
+  }
+
+  @Test
+  public void testHandlerException() throws Exception {
+    HttpURLConnection urlConn = request("/test/v1/uexception", HttpMethod.GET);
+    Assert.assertEquals(500, urlConn.getResponseCode());
+    Assert.assertEquals("Exception Encountered while processing request : User Exception",
+                        IOUtils.toString(urlConn.getErrorStream()));
     urlConn.disconnect();
   }
 
