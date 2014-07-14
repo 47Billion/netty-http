@@ -25,11 +25,11 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.ws.rs.PathParam;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.Set;
+import javax.ws.rs.PathParam;
 
 /**
  * HttpResourceModel contains information needed to handle Http call for a given path. Used as a destination in

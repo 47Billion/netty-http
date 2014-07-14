@@ -114,8 +114,7 @@ class HttpMethodInfo {
   }
 
   /**
-   * Returns true if the handler method's return type is BodyConsumer
-   * @return
+   * Returns true if the handler method's return type is BodyConsumer.
    */
   boolean isStreaming() {
     return isStreaming;

@@ -217,9 +217,9 @@ public class TestHandler implements HttpHandler {
   @Path("/stream/upload")
   @PUT
   public BodyConsumer streamUpload(HttpRequest request, HttpResponder responder) {
-    final int FILE_SIZE = 200 * 1024 * 1024;
+    final int fileSize = 200 * 1024 * 1024;
     return new BodyConsumer() {
-      ByteBuffer offHeapBuffer = ByteBuffer.allocateDirect(FILE_SIZE);
+      ByteBuffer offHeapBuffer = ByteBuffer.allocateDirect(fileSize);
 
       @Override
       public void chunk(ChannelBuffer request, HttpResponder responder) {
@@ -243,11 +243,11 @@ public class TestHandler implements HttpHandler {
   @Path("/stream/upload/fail")
   @PUT
   public BodyConsumer streamUploadFailure(HttpRequest request, HttpResponder responder)  {
-    final int FILE_SIZE = 200 * 1024 * 1024;
+    final int fileSize = 200 * 1024 * 1024;
 
     return new BodyConsumer() {
       int count = 0;
-      ByteBuffer offHeapBuffer = ByteBuffer.allocateDirect(FILE_SIZE);
+      ByteBuffer offHeapBuffer = ByteBuffer.allocateDirect(fileSize);
 
       @Override
       public void chunk(ChannelBuffer request, HttpResponder responder) {
