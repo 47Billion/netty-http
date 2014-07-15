@@ -202,6 +202,7 @@
             <configuration>
               <excludes>
                 <exclude>LICENSE</exclude>
+                <exclude>build-number.txt</exclude>
               </excludes>
             </configuration>
           </execution>
