@@ -20,6 +20,7 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
@@ -31,6 +32,7 @@ import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
+import org.jboss.netty.handler.ssl.SslHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,13 +51,15 @@ public class RequestRouter extends SimpleChannelUpstreamHandler {
   private final int chunkMemoryLimit;
   private final HttpResourceHandler httpMethodHandler;
   private final AtomicBoolean exceptionRaised;
+  private final boolean enableSSL;
 
   private HttpMethodInfo methodInfo;
 
-  public RequestRouter(HttpResourceHandler methodHandler, int chunkMemoryLimit) {
+  public RequestRouter(HttpResourceHandler methodHandler, int chunkMemoryLimit, boolean enableSSL) {
     this.httpMethodHandler = methodHandler;
     this.chunkMemoryLimit = chunkMemoryLimit;
     this.exceptionRaised = new AtomicBoolean(false);
+    this.enableSSL = enableSSL;
   }
 
   /**
@@ -81,6 +85,26 @@ public class RequestRouter extends SimpleChannelUpstreamHandler {
     }
   }
 
+  @Override
+  public void channelConnected(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
+    if (enableSSL) {
+      // Get the SslHandler in the current pipeline.
+      final SslHandler sslHandler = ctx.getPipeline().get(SslHandler.class);
+
+      // Get notified when SSL handshake is done.
+      ChannelFuture handshakeFuture = sslHandler.handshake();
+      handshakeFuture.addListener(new SSLHandshakeListener());
+    }
+  }
+
+  private class SSLHandshakeListener implements ChannelFutureListener {
+    @Override
+    public void operationComplete(ChannelFuture channelFuture) throws Exception {
+      if (!channelFuture.isSuccess()) {
+        channelFuture.addListener(ChannelFutureListener.CLOSE);
+      }
+    }
+  }
   /**
    * If return type of the handler http method is BodyConsumer, remove "HttpChunkAggregator" class if it exits
    * Else add the HttpChunkAggregator to the pipeline if its not present already.

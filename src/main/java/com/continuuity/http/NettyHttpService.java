@@ -42,6 +42,7 @@ import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.net.InetSocketAddress;
 import java.util.Map;
 import java.util.concurrent.Executor;
@@ -51,6 +52,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+
 
 /**
  * Webservice implemented using the netty framework. Implements Guava's Service interface to manage the states
@@ -76,6 +78,8 @@ public final class NettyHttpService extends AbstractIdleService {
   private ServerBootstrap bootstrap;
   private InetSocketAddress bindAddress;
   private int httpChunkLimit;
+  private SSLHandlerFactory sslHandlerFactory;
+
 
   /**
    * Initialize NettyHttpService.
@@ -89,7 +93,9 @@ public final class NettyHttpService extends AbstractIdleService {
    * @param urlRewriter URLRewriter to rewrite incoming URLs.
    * @param httpHandlers HttpHandlers to handle the calls.
    * @param handlerHooks Hooks to be called before/after request processing by httpHandlers.
+   * @deprecated Use {@link NettyHttpService.Builder} instead.
    */
+  @Deprecated
   public NettyHttpService(InetSocketAddress bindAddress, int bossThreadPoolSize, int workerThreadPoolSize,
                           int execThreadPoolSize, long execThreadKeepAliveSecs,
                           Map<String, Object> channelConfigs,
@@ -108,10 +114,11 @@ public final class NettyHttpService extends AbstractIdleService {
     this.handlerContext = new BasicHandlerContext(this.resourceHandler);
     this.httpChunkLimit = httpChunkLimit;
     this.pipelineModifier = null;
+    this.sslHandlerFactory = null;
   }
 
   /**
-   * Initialize NettyHttpService.
+   * Initialize NettyHttpService. Also includes SSL implementation.
    * @param bindAddress Address for the service to bind to.
    * @param bossThreadPoolSize Size of the boss thread pool.
    * @param workerThreadPoolSize Size of the worker thread pool.
@@ -123,14 +130,16 @@ public final class NettyHttpService extends AbstractIdleService {
    * @param httpHandlers HttpHandlers to handle the calls.
    * @param handlerHooks Hooks to be called before/after request processing by httpHandlers.
    * @param pipelineModifier Function used to modify the pipeline.
+   * @param sslHandlerFactory Object used to share SSL certificate details
    */
   private NettyHttpService(InetSocketAddress bindAddress, int bossThreadPoolSize, int workerThreadPoolSize,
-                          int execThreadPoolSize, long execThreadKeepAliveSecs,
-                          Map<String, Object> channelConfigs,
-                          RejectedExecutionHandler rejectedExecutionHandler, URLRewriter urlRewriter,
-                          Iterable<? extends HttpHandler> httpHandlers,
-                          Iterable<? extends HandlerHook> handlerHooks, int httpChunkLimit,
-                          Function<ChannelPipeline, ChannelPipeline> pipelineModifier) {
+                           int execThreadPoolSize, long execThreadKeepAliveSecs,
+                           Map<String, Object> channelConfigs,
+                           RejectedExecutionHandler rejectedExecutionHandler, URLRewriter urlRewriter,
+                           Iterable<? extends HttpHandler> httpHandlers,
+                           Iterable<? extends HandlerHook> handlerHooks, int httpChunkLimit,
+                           Function<ChannelPipeline, ChannelPipeline> pipelineModifier,
+                           SSLHandlerFactory sslHandlerFactory) {
     this.bindAddress = bindAddress;
     this.bossThreadPoolSize = bossThreadPoolSize;
     this.workerThreadPoolSize = workerThreadPoolSize;
@@ -143,6 +152,11 @@ public final class NettyHttpService extends AbstractIdleService {
     this.handlerContext = new BasicHandlerContext(this.resourceHandler);
     this.httpChunkLimit = httpChunkLimit;
     this.pipelineModifier = pipelineModifier;
+    this.sslHandlerFactory = sslHandlerFactory;
+  }
+
+  private boolean isSSLEnabled() {
+    return this.sslHandlerFactory != null;
   }
 
   /**
@@ -185,7 +199,7 @@ public final class NettyHttpService extends AbstractIdleService {
    * @param threadPoolSize Size of threadpool in threadpoolExecutor
    * @param threadKeepAliveSecs  maximum time that excess idle threads will wait for new tasks before terminating.
    */
-  private void bootStrap(int threadPoolSize, long threadKeepAliveSecs) {
+  private void bootStrap(int threadPoolSize, long threadKeepAliveSecs) throws Exception {
 
     final ExecutionHandler executionHandler = (threadPoolSize) > 0 ?
       createExecutionHandler(threadPoolSize, threadKeepAliveSecs) : null;
@@ -221,12 +235,15 @@ public final class NettyHttpService extends AbstractIdleService {
       @Override
       public ChannelPipeline getPipeline() throws Exception {
         ChannelPipeline pipeline = Channels.pipeline();
-
+        if (isSSLEnabled()) {
+          // Add SSLHandler if SSL is enabled
+          pipeline.addLast("ssl", sslHandlerFactory.create());
+        }
         pipeline.addLast("tracker", connectionTracker);
         pipeline.addLast("compressor", new HttpContentCompressor());
         pipeline.addLast("encoder", new HttpResponseEncoder());
         pipeline.addLast("decoder", new HttpRequestDecoder());
-        pipeline.addLast("router", new RequestRouter(resourceHandler, httpChunkLimit));
+        pipeline.addLast("router", new RequestRouter(resourceHandler, httpChunkLimit, isSSLEnabled()));
         if (executionHandler != null) {
           pipeline.addLast("executor", executionHandler);
         }
@@ -303,6 +320,7 @@ public final class NettyHttpService extends AbstractIdleService {
     private RejectedExecutionHandler rejectedExecutionHandler;
     private Map<String, Object> channelConfigs;
     private int httpChunkLimit;
+    private SSLHandlerFactory sslHandlerFactory;
     private Function<ChannelPipeline, ChannelPipeline> pipelineModifier;
 
     //Private constructor to prevent instantiating Builder instance directly.
@@ -316,12 +334,13 @@ public final class NettyHttpService extends AbstractIdleService {
       port = 0;
       channelConfigs = Maps.newHashMap();
       channelConfigs.put("backlog", DEFAULT_CONNECTION_BACKLOG);
+      sslHandlerFactory = null;
     }
 
     /**
      * Modify the pipeline upon build by applying the function.
      * @param function Function that modifies and returns a pipeline.
-     * @return
+     * @return builder
      */
     public Builder modifyChannelPipeline(Function<ChannelPipeline, ChannelPipeline> function) {
       this.pipelineModifier = function;
@@ -475,6 +494,14 @@ public final class NettyHttpService extends AbstractIdleService {
     }
 
     /**
+     * Enable SSL by using the provided SSL information
+     */
+    public Builder enableSSL(File keyStore, String keyStorePassword, String certificatePassword) {
+      this.sslHandlerFactory = new SSLHandlerFactory(keyStore, keyStorePassword, certificatePassword);
+      return this;
+    }
+
+    /**
      * @return instance of {@code NettyHttpService}
      */
     public NettyHttpService build() {
@@ -487,7 +514,8 @@ public final class NettyHttpService extends AbstractIdleService {
 
       return new NettyHttpService(bindAddress, bossThreadPoolSize, workerThreadPoolSize,
                                   execThreadPoolSize, execThreadKeepAliveSecs, channelConfigs, rejectedExecutionHandler,
-                                  urlRewriter, handlers, handlerHooks, httpChunkLimit, pipelineModifier);
+                                  urlRewriter, handlers, handlerHooks, httpChunkLimit, pipelineModifier,
+                                    sslHandlerFactory);
     }
   }
 }
