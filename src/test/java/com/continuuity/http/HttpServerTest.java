@@ -51,11 +51,11 @@ import javax.annotation.Nullable;
  */
 public class HttpServerTest {
 
-  private static final Type STRING_MAP_TYPE = new TypeToken<Map<String, String>>() { }.getType();
-  private static final Gson GSON = new Gson();
+  protected static final Type STRING_MAP_TYPE = new TypeToken<Map<String, String>>() { }.getType();
+  protected static final Gson GSON = new Gson();
 
-  private static NettyHttpService service;
-  private static URI baseURI;
+  protected static NettyHttpService service;
+  protected static URI baseURI;
 
   @ClassRule
   public static TemporaryFolder tmpFolder = new TemporaryFolder();
@@ -124,7 +124,7 @@ public class HttpServerTest {
   }
 
 
-  private void testStreamUpload(int size) throws IOException {
+  protected void testStreamUpload(int size) throws IOException {
     //create a random file to be uploaded.
     File fname = tmpFolder.newFile();
     RandomAccessFile randf = new RandomAccessFile(fname, "rw");
@@ -364,22 +364,22 @@ public class HttpServerTest {
     testContent("/test/v1/multi-match/foo", "multi-match-put-actual-foo", HttpMethod.PUT);
   }
 
-  private void testContent(String path, String content) throws IOException {
+  protected void testContent(String path, String content) throws IOException {
     testContent(path, content, HttpMethod.GET);
   }
 
-  private void testContent(String path, String content, HttpMethod method) throws IOException {
+  protected void testContent(String path, String content, HttpMethod method) throws IOException {
     HttpURLConnection urlConn = request(path, method);
     Assert.assertEquals(200, urlConn.getResponseCode());
     Assert.assertEquals(content, getContent(urlConn));
     urlConn.disconnect();
   }
 
-  private HttpURLConnection request(String path, HttpMethod method) throws IOException {
+  protected HttpURLConnection request(String path, HttpMethod method) throws IOException {
     return request(path, method, false);
   }
 
-  private HttpURLConnection request(String path, HttpMethod method, boolean keepAlive) throws IOException {
+  protected HttpURLConnection request(String path, HttpMethod method, boolean keepAlive) throws IOException {
     URL url = baseURI.resolve(path).toURL();
     HttpURLConnection urlConn = (HttpURLConnection) url.openConnection();
     if (method == HttpMethod.POST || method == HttpMethod.PUT) {
@@ -393,11 +393,11 @@ public class HttpServerTest {
     return urlConn;
   }
 
-  private String getContent(HttpURLConnection urlConn) throws IOException {
+  protected String getContent(HttpURLConnection urlConn) throws IOException {
     return new String(ByteStreams.toByteArray(urlConn.getInputStream()), Charsets.UTF_8);
   }
 
-  private void writeContent(HttpURLConnection urlConn, String content) throws IOException {
+  protected void writeContent(HttpURLConnection urlConn, String content) throws IOException {
     urlConn.getOutputStream().write(content.getBytes(Charsets.UTF_8));
   }
 }
