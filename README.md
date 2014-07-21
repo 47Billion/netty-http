@@ -145,7 +145,7 @@ To run a HTTPS Service, add an additional function call to builder.
 enableSSL(<File:keyStore>, <String:keyStorePassword>,  <String:certificatePassword>)
 ```
 
-Code Excerpt
+Code Sample
 ```
 // Setup HTTPS service and add Handlers
     NettyHttpService service = NettyHttpService.builder()
@@ -155,7 +155,6 @@ Code Excerpt
                                .build();
 ```
 
-Note: 
 * Set <String:certificatePassword> as "null" when not applicable 
 * <File:keyStore> points to the key store that holds your SSL certificate
 
