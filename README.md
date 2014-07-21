@@ -21,7 +21,7 @@ Build the HTTP Library
   $ mvn clean package
 ```
 
-Setting up an HTTP Service using the library
+Setting up a HTTP Service using the library
 --------------------------------------------
 Setting up an HTTP service is very simple using this library:
 * Implement handler methods for different HTTP requests
@@ -137,6 +137,27 @@ Example: Sample HTTP service that manages an application lifecycle.
     // Start the HTTP service
     service.startAndWait();
 ```
+
+Setting up a HTTPS Service
+---------------------------
+To run a HTTPS Service, add an additional function call to builder.
+```
+enableSSL(<File:keyStore>, <String:keyStorePassword>,  <String:certificatePassword>)
+```
+
+Code Excerpt
+```
+// Setup HTTPS service and add Handlers
+    NettyHttpService service = NettyHttpService.builder()
+                               .setPort(7777)
+                               .addHttpHandlers(ImmutableList.of(new ApplicationHandler()))
+                               .enableSSL(new File("/path/to/keyStore.jks"), "keyStorePassword", "certificatePassowrd")
+                               .build();
+```
+
+Note: 
+* Set <String:certificatePassword> as "null" when not applicable 
+* <File:keyStore> points to the key store that holds your SSL certificate
 
 References
 ----------
