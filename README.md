@@ -2,6 +2,10 @@ Netty Http
 -------
 A library to develop HTTP services with [Netty](http://netty.io/). Supports the capability to route end-points based on [JAX-RS](https://jax-rs-spec.java.net/) style annotations. Implements Guava's Service interface to manage the runtime-state of the HTTP service.
 
+Build Status
+------------
+[![Build Status](https://travis-ci.org/continuuity/netty-http.svg?branch=develop)](https://travis-ci.org/continuuity/netty-http)
+
 Need for this library 
 ---------------------
 [Netty](http://netty.io/) is a powerful framework to write asynchronous event-driven high-performance applications. While it is relatively easy to write a RESTFUL HTTP service using netty, the mapping between HTTP routes to handlers is
